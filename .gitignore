@@ -97,3 +97,6 @@ docker/volumes/
 
 openspec/
 skills-lock.json
+
+#Pre-Commit initialization 
+.husky

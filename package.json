@@ -1,0 +1,30 @@
+{
+  "name": "sof-eng-2026-runtime-terror",
+  "version": "1.0.0",
+  "description": "**Universidad Nacional de Córdoba** · Facultad de Ciencias Exactas, Físicas y Naturales · Ingeniería de Software",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ICOMP-UNC/sof-eng-2026-runtime-terror.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ICOMP-UNC/sof-eng-2026-runtime-terror/issues"
+  },
+  "homepage": "https://github.com/ICOMP-UNC/sof-eng-2026-runtime-terror#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "husky": "^9.1.7"
+  }
+}
