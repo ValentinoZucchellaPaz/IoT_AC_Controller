@@ -1,10 +1,15 @@
 package app.monitor;
 
 import app.strategy.TransportStrategy;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class TransportMonitor {
 
     private TransportStrategy strategy;
+
+    private static final DateTimeFormatter FORMATTER =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public void setStrategy(TransportStrategy strategy) {
         this.strategy = strategy;
@@ -25,16 +30,15 @@ public class TransportMonitor {
         double distance = strategy.getDistance();
         int eta = strategy.getEta();
 
-        log(name, cost, distance, eta);
+        log("INFO", String.format(
+            "Type=%s | Cost=%.2f | Distance=%.2f | ETA=%d",
+            name, cost, distance, eta
+        ));
     }
 
-    private void log(String name, double cost, double distance, int eta) {
-        System.out.println("---- Transport Update ----");
-        System.out.println("Type: " + name);
-        System.out.println("Cost: " + cost);
-        System.out.println("Distance: " + distance);
-        System.out.println("ETA: " + eta + " min");
-        System.out.println("--------------------------");
+    private void log(String level, String message) {
+        String timestamp = LocalDateTime.now().format(FORMATTER);
+        System.out.println("[" + timestamp + "] [" + level + "] " + message);
     }
 
     public void start(int iterations, int delayMs) {
