@@ -11,6 +11,6 @@ public class TaxiStrategy extends BaseTransportStrategy {
 
     @Override
     public double calculateCost() {
-        return 10000 + (10 * random.nextDouble());
+        return 10000 + (10000 * random.nextDouble());
     }
 }

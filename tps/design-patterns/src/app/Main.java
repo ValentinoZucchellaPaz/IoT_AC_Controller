@@ -10,9 +10,9 @@ public class Main {
         TransportMonitor monitor = new TransportMonitor();
 
         monitor.setStrategy(new BusStrategy());
-        monitor.start(10, 1000);
+        monitor.start(5, 1000);
 
         monitor.setStrategy(new BikeStrategy());
-        monitor.start(10, 1000);
+        monitor.start(5, 1000);
     }
 }

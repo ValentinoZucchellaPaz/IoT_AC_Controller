@@ -11,6 +11,6 @@ public class BusStrategy extends BaseTransportStrategy {
 
     @Override
     public double calculateCost() {
-        return 1000 + (10 * random.nextDouble());
+        return 1000 + (1000 * random.nextDouble());
     }
 }
