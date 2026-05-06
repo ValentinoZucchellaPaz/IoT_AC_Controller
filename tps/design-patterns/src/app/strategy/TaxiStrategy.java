@@ -6,7 +6,7 @@ public class TaxiStrategy extends BaseTransportStrategy {
     private final Random random = new Random();
 
     public TaxiStrategy() {
-        super("Taxi", 10.0, 25); // hardcodeado por ahora
+        super("Taxi", 10.0, 25); // hardcoded temporarily
     }
 
     @Override

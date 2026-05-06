@@ -6,7 +6,7 @@ public class BusStrategy extends BaseTransportStrategy {
     private final Random random = new Random();
 
     public BusStrategy() {
-        super("Bus", 10.0, 45); // hardcodeado por ahora
+        super("Bus", 10.0, 45); // hardcoded temporarily
     }
 
     @Override
