@@ -99,4 +99,4 @@ openspec/
 skills-lock.json
 
 #Pre-Commit initialization 
-.husky
+.husky/_

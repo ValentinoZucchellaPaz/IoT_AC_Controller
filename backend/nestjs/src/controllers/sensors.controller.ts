@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+//import { Controller, Post, Body, Get } from '@nestjs/common' <- Linea original, falla al ejecutar linter
+import { Controller, Post, Body } from '@nestjs/common';
 import { SensorsService } from '../services/sensors.service';
 import { CreateSensorDto } from '../models/dto/create-sensor.dto';
 
