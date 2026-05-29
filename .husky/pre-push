@@ -1,5 +1,12 @@
-echo "Running NestJS lint..."
+#!/bin/sh
 
 cd backend/nestjs || exit 1
 
-npm run lint
+echo "Running build validation..."
+
+npm run build
+
+if [ $? -ne 0 ]; then
+  echo "Build failed. Push aborted."
+  exit 1
+fi
