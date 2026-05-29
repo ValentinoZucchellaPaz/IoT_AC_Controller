@@ -8,30 +8,54 @@ services:
     image: postgres:16-alpine
     container_name: soft-eng-postgres
     restart: unless-stopped
-    
+
     # Environment variables loaded from root .env file
     env_file:
       - ../.env
+
     # Host port 5433 avoids clashing with a local PostgreSQL on 5432.
     # Keep POSTGRES_PORT in the repo root .env in sync (see .env.example).
     ports:
       - "5433:5432"
-    
+
     # Volume for data persistence
     # Database data will survive container restarts
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Optional: Add initialization scripts here
       # - ./init-scripts:/docker-entrypoint-initdb.d
-    
+
     # Health check to ensure database is ready
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
-    
+
     # Network configuration
+    networks:
+      - soft-eng-network
+
+  # MQTT Broker Service
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: soft-eng-mqtt
+    restart: unless-stopped
+
+    ports:
+      - "1883:1883"
+
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "healthcheck", "-C", "1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     networks:
       - soft-eng-network
 

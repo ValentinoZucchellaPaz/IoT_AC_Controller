@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SensorReading } from '../models/entities/sensor-reading.entity';
 import { SensorsRepository } from './sensors.repository';
+import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SensorReading])],
+  imports: [TypeOrmModule.forFeature([ProcessedSensorData])],
   providers: [SensorsRepository],
   exports: [SensorsRepository],
 })

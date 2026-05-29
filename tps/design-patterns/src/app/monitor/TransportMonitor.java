@@ -1,62 +1,75 @@
 package app.monitor;
-
-import app.strategy.TransportStrategy;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import app.strategy.*;
+import app.observer.*;
 
 public class TransportMonitor {
+    private final List<TransportObserver> observers = new ArrayList<>();
+    private TransportStrategy currentStrategy;
 
-    private TransportStrategy strategy;
+    // atributos para evitar duplicar thread
+    private Thread monitorThread;
+    private volatile boolean running = false;
 
-    private static final DateTimeFormatter FORMATTER =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    public void setStrategy(TransportStrategy strategy) {
-        this.strategy = strategy;
+    public TransportMonitor(){
+        this.currentStrategy = null;
     }
 
-    public TransportStrategy getStrategy() {
-        return strategy;
+    public TransportMonitor(TransportStrategy strategy){
+        this.currentStrategy = strategy;
     }
 
-    public void getData() {
-        if (strategy == null) {
-            System.out.println("No strategy selected");
-            return;
-        }
-
-        String name = strategy.getName();
-        double cost = strategy.calculateCost();
-        double distance = strategy.getDistance();
-        int eta = strategy.getEta();
-
-        log("INFO", String.format(
-            "Type=%s | Cost=%.2f | Distance=%.2f | ETA=%d",
-            name, cost, distance, eta
-        ));
+    public void subscribe(TransportObserver observer){
+        observers.add(observer);
     }
 
-    private void log(String level, String message) {
-        String timestamp = LocalDateTime.now().format(FORMATTER);
-        System.out.println("[" + timestamp + "] [" + level + "] " + message);
+    public void unsubscribe(TransportObserver observer){
+        observers.remove(observer);
     }
 
-    public void start(int iterations, int delayMs) {
-        if (strategy == null) {
-            System.out.println("No strategy selected");
-            return;
-        }
+    public void setStrategy(TransportStrategy strategy){
+        this.currentStrategy = strategy;
+    }
 
-        for (int i = 0; i < iterations; i++) {
-            getData();
+    public synchronized void start(int intervalMs){
+        // evita arrancar múltiples threads
+        if(running) return;
+        running = true;
 
-            try {
-                Thread.sleep(delayMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                System.out.println("Monitor interrupted");
-                break;
+        if(this.currentStrategy == null) return;
+
+        monitorThread = new Thread(()->{
+            while(running){
+                TransportSnapshot snapshot = new TransportSnapshot( // no seria mejor tener esto adentro del strategy si siempre trae los datos de ahi?
+                        currentStrategy.getName(),
+                        currentStrategy.calculateCost(),
+                        currentStrategy.getDistance(),
+                        currentStrategy.getEta()
+                );
+                for(TransportObserver ob: observers){
+                    ob.onUpdate(snapshot);
+                }
+                try{
+                    Thread.sleep(intervalMs);
+                }
+                catch(InterruptedException e){
+                    break;
+                }
             }
+
+            System.out.println("[Monitor] detenido.");
+        });
+
+        monitorThread.start();
+    }
+
+    public synchronized void stop(){
+
+        running = false;
+
+        if(monitorThread != null){
+            monitorThread.interrupt();
         }
     }
 }

@@ -1,14 +1,22 @@
-//import { Controller, Post, Body, Get } from '@nestjs/common' <- Linea original, falla al ejecutar linter
-import { Controller, Post, Body } from '@nestjs/common';
-import { SensorsService } from '../services/sensors.service';
+import { Controller, Logger, UsePipes, ValidationPipe } from '@nestjs/common';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { CreateSensorDto } from '../models/dto/create-sensor.dto';
+import { SensorProcessingService } from '../services/sensor-processing.service';
 
 @Controller('sensors')
 export class SensorsController {
-  constructor(private readonly sensorsService: SensorsService) {}
+  private readonly logger = new Logger(SensorsController.name);
 
-  @Post()
-  async create(@Body() dto: CreateSensorDto) {
-    return this.sensorsService.create(dto);
+  constructor(private readonly sensorDataProcessor: SensorProcessingService) {}
+
+  @EventPattern('sensor/datos') // subscribe to mqtt topic
+  @UsePipes(new ValidationPipe()) // validate dto for mqtt
+  async createFromMqtt(@Payload() dto: CreateSensorDto) {
+    const processedData =
+      await this.sensorDataProcessor.processIncomingData(dto);
+
+    this.logger.log("MQTT ${'sensor/datos'}: ", processedData); // display in console
+
+    return dto;
   }
 }

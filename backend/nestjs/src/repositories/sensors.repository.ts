@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SensorReading } from '../models/entities/sensor-reading.entity';
-import { CreateSensorDto } from '../models/dto/create-sensor.dto';
+import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
 
 @Injectable()
 export class SensorsRepository {
   constructor(
-    @InjectRepository(SensorReading)
-    private readonly repo: Repository<SensorReading>,
+    @InjectRepository(ProcessedSensorData)
+    private readonly repo: Repository<ProcessedSensorData>,
   ) {}
 
-  async save(dto: CreateSensorDto): Promise<SensorReading> {
-    const entity = this.repo.create(dto);
-    return this.repo.save(entity);
+  async save(dto: ProcessedSensorData): Promise<ProcessedSensorData> {
+    return this.repo.save(dto);
   }
+
+  // TODO: get last query, get history queries
 }

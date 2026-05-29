@@ -1,12 +1,31 @@
-import { IsString, IsNumber } from 'class-validator';
+import {
+  IsArray,
+  ArrayNotEmpty,
+  IsBoolean,
+  IsNumber,
+  IsString,
+} from 'class-validator';
 
 export class CreateSensorDto {
   @IsString()
-  sensorId: string;
+  device_id!: string;
+
+  @IsBoolean()
+  ac_state!: boolean;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsNumber({}, { each: true })
+  desired_temperature!: number[];
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsNumber({}, { each: true })
+  current_temperature!: number[];
 
   @IsNumber()
-  temperature: number;
+  valid_samples!: number;
 
   @IsNumber()
-  humidity: number;
+  ts_end!: number;
 }
