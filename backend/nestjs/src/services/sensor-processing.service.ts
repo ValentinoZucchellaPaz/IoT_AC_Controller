@@ -19,6 +19,7 @@ export class SensorProcessingService {
     private readonly sensorsRepository: SensorsRepository,
   ) {}
 
+  /** applies processing strategies to incoming data (current_temp_stats, desire_temp_mode) */
   async processIncomingData(
     input: CreateSensorDto,
   ): Promise<ProcessedSensorData> {
@@ -26,12 +27,12 @@ export class SensorProcessingService {
 
     output.device_id = input.device_id;
     output.ac_state = input.ac_state;
-    output.ts_end = input.ts_end;
+    output.ts_end = new Date(input.ts_end * 1000); // parse Unix Timestamp to datetime
 
     this.strategies.forEach((s) => {
       s.process(input, output);
     });
 
-    return await this.sensorsRepository.save(output);
+    return this.sensorsRepository.save(output);
   }
 }

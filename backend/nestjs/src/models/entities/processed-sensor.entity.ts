@@ -28,8 +28,13 @@ export class ProcessedSensorData {
   @Column('float')
   avg_temperature!: number;
 
-  @Column('bigint')
-  ts_end!: number;
+  // @Column('bigint')
+  // ts_end!: number;
+
+  @Column({
+    type: 'timestamptz',
+  })
+  ts_end!: Date;
 
   @CreateDateColumn()
   created_at!: Date;

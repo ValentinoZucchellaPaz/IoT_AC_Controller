@@ -1,47 +1,97 @@
-import { Controller, Get, Logger } from '@nestjs/common';
-import { ErrorResponseDto } from 'src/models/dto/response/error-response.dto';
+import { Controller, Get, Logger, Param, ParseEnumPipe } from '@nestjs/common';
+import { HistoryPeriod } from 'src/common/enum/history-period.enum';
+import { SensorErrorResponseDto } from 'src/models/dto/response/sensor-error-response.dto';
 import { SensorHistoryResponseDto } from 'src/models/dto/response/sensor-history-response.dto';
 import { SensorResponseDto } from 'src/models/dto/response/sensor-response.dto';
-import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
 import { ResponseProcessingService } from 'src/services/response-processing.service';
+import { RetrieveDataService } from 'src/services/retrieve-data.service';
 
 @Controller('data')
-export class SensorsController {
-  private readonly logger = new Logger(SensorsController.name);
+export class DataController {
+  private readonly logger = new Logger(DataController.name);
 
   constructor(
     private readonly responseDataProcessor: ResponseProcessingService,
-    // agregar retrieveDataService
+    private readonly retrieveDataService: RetrieveDataService,
   ) {}
 
-  @Get('/data/last')
-  async getLast(): Promise<SensorResponseDto | ErrorResponseDto> {
-    // buscar con service el ultimo dato guardado
-    // si no hay devolver 404
-    // sino creo response y devuelvo
-    const response = new SensorResponseDto();
-    response.message = 'todo ok';
-    return await new Promise((resolve) => resolve(response));
-  }
+  //   {
+  //   "success": true,
+  //   "message": "ok",
+  //   "data": {
+  //     "id": 12,
+  //     "device_id": "ESP32_01",
+  //     "ac_state": false,
+  //     "desired_temperature": 22,
+  //     "min_temperature": 22,
+  //     "max_temperature": 22,
+  //     "avg_temperature": 22,
+  //     "ts_end": "2026-06-02T07:00:00.000Z",
+  //     "created_at": "2026-06-02T09:39:04.282Z"
+  //   },
+  //   "timestamp": "2026-06-02T06:40:06.038Z"
+  //   }
 
-  @Get('/data/history/:period')
-  async getHistory(): Promise<SensorHistoryResponseDto | ErrorResponseDto> {
-    // parsear param de llegada
-    // si no es valido return 400
-    // obtener datos historicos
-    // si no hay return 404
+  /**
+   * Returns the most recent sensor sample stored in the database.
+   * Returns success=false if no data exists.
+   */
+  @Get('/last')
+  async getLast(): Promise<SensorResponseDto | SensorErrorResponseDto> {
+    const lastSample = await this.retrieveDataService.getLast();
 
-    const dto = [new ProcessedSensorData()]; // evito error de linter, esto debe venir de la db
+    if (!lastSample)
+      return new SensorErrorResponseDto(
+        'NO_CONTENT',
+        'No sensor data found',
+        'No data available',
+      );
 
-    const processedData =
-      await this.responseDataProcessor.processIncomingData(dto);
+    const response = new SensorResponseDto(lastSample, 'ok');
 
-    const response = new SensorHistoryResponseDto();
-    response.data = processedData;
-    response.total = processedData.samples.length;
-
-    this.logger.log("HTTP ${'/data/history'}: ", JSON.stringify(response)); // display in console
+    // this.logger.log(`HTTP /data/last: ${JSON.stringify(response)}`);
 
     return response;
+  }
+
+  /**
+   * Returns historical sensor data for the requested period.
+   * Returns success=false if no data exists.
+   * Supported periods: 1h, 6h, 12h, 1d, 3d, 7d
+   */
+  @Get('/history/:period')
+  async getHistory(
+    @Param('period', new ParseEnumPipe(HistoryPeriod)) // nest default parse error handling
+    period: HistoryPeriod,
+  ): Promise<SensorHistoryResponseDto | SensorErrorResponseDto> {
+    // gets the data of that period (enum with all posible periods)
+    const rawData = await this.retrieveDataService.getHistory(period);
+
+    if (rawData.length == 0)
+      return new SensorErrorResponseDto(
+        'NO_CONTENT',
+        'No history data found',
+        'No data available',
+      );
+
+    // apply strategy
+    const processedData =
+      this.responseDataProcessor.processIncomingData(rawData);
+
+    // create response dto
+    const response = new SensorHistoryResponseDto(
+      processedData.samples.length,
+      processedData,
+      'ok',
+    );
+
+    // this.logger.log("HTTP ${'/data/history'}: ", JSON.stringify(response));
+    return response;
+  }
+
+  // testing global error handler
+  @Get('/test-error')
+  testError() {
+    throw new Error('Test error, everything ok');
   }
 }

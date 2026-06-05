@@ -12,11 +12,10 @@ export class SensorsController {
   @EventPattern('sensor/datos') // subscribe to mqtt topic
   @UsePipes(new ValidationPipe()) // validate dto for mqtt
   async createFromMqtt(@Payload() dto: CreateSensorDto) {
-    const processedData =
+    try {
       await this.sensorDataProcessor.processIncomingData(dto);
-
-    this.logger.log("MQTT ${'sensor/datos'}: ", processedData); // display in console
-
-    return dto;
+    } catch (error) {
+      this.logger.error("MQTT ${'sensor/datos'}: ", error);
+    }
   }
 }

@@ -9,17 +9,21 @@ Todos los integrantes del equipo deben seguir estos pasos después de clonar el 
 
 Asegurate de tener instalado lo siguiente antes de comenzar:
 
-| Herramienta | Versión | Descarga |
-|---|---|---|
-| **Node.js** | 18 o superior | https://nodejs.org |
-| **Git** | Última versión | https://git-scm.com |
+| Herramienta        | Versión        | Descarga                                 |
+| ------------------ | -------------- | ---------------------------------------- |
+| **Node.js**        | 18 o superior  | https://nodejs.org                       |
+| **Git**            | Última versión | https://git-scm.com                      |
+| **Docker**         | Última versión | https://docs.docker.com/engine/install/  |
+| **Docker Compose** | Última versión | https://docs.docker.com/compose/install/ |
 
 Para verificar que están instalados:
 
 ```bash
-node --version    # debe mostrar v18.x.x o superior
-npm --version     # debe mostrar 9.x.x o superior
-git --version     # debe mostrar git version 2.x.x
+node --version              # debe mostrar v18.x.x o superior
+npm --version               # debe mostrar 9.x.x o superior
+git --version               # debe mostrar 2.x.x o superior
+docker --version            # debe mostrar 29.x.x o superior
+docker-compose --version    # debe mostrar 1.x.x o superior
 ```
 
 ---
@@ -33,31 +37,42 @@ git clone https://github.com/ICOMP-UNC/sof-eng-2026-runtime-terror.git
 cd sof-eng-2026-runtime-terror
 ```
 
-### 2. Instalar dependencias de la raíz y activar Husky
+### 2. Levantar infraestructura
 
-Desde la **raíz del proyecto**:
+Con los siguientes comando vamos a levantar la base de datos y el servicio de comunicacion MQTT
 
 ```bash
-npm install
+# Vamos al path de docker-compose.yml y ejecutamos:
+cd docker
+docker compose up -d
+
+# Verificar que los contenedores estén ejecutándose:
+docker ps
 ```
 
-Este único comando instala todas las dependencias de la raíz y activa automáticamente
-los hooks de Git de Husky en tu computadora. No se necesitan pasos adicionales.
-
-### 3. Instalar dependencias del backend
+### 3. Instalar dependencias. Arrancar back y front
 
 ```bash
 cd backend/nestjs
 npm install
-cd ../..
+npm run start
+cd ../../frontend/dashboard
+npm install
+npm run start
 ```
+
+> En caso que se quieran actualizaciones con los cambios cuando se codea usar la alternativa `dev` en vez de `start`
 
 ---
 
 ## Hooks de Git — Validaciones Automáticas
 
 Este proyecto usa **Husky** para correr validaciones automáticas en cada commit y push.
-Los hooks se activan automáticamente cuando corrés `npm install` en la raíz (Paso 2).
+Se instala haciendo install desde la raiz:
+
+```bash
+npm install
+```
 
 ### commit-msg — Validación del mensaje de commit
 
@@ -80,6 +95,7 @@ git commit -m "feat(SCRUM-1): add initial project setup"
 
 Antes de cada commit, ESLint corre automáticamente sobre el código del backend.
 Si hay errores de linting, el commit se bloquea hasta que sean corregidos.
+Ya estan instaladas las dependencias si ya hiciste el paso 3.
 
 **Cómo probarlo:**
 
@@ -99,6 +115,7 @@ git commit -m "feat(SCRUM-1): test lint hook"
 ```
 
 > **Importante:**
+>
 > - Los **errores** de ESLint bloquean el commit
 > - Los **warnings** de ESLint NO bloquean el commit
 > - El linting aplica actualmente al backend NestJS únicamente

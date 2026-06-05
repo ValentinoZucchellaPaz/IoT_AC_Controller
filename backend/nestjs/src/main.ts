@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Transport } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +17,9 @@ async function bootstrap() {
     }),
   );
 
+  // use global error handler
+  app.useGlobalFilters(new GlobalExceptionFilter());
+  
   // subscribe to MQTT broker
   app.connectMicroservice(
     {

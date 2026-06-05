@@ -6,16 +6,23 @@ import {
   INCOMING_SENSOR_DATA_STRATEGIES,
   SensorProcessingService,
 } from './sensor-processing.service';
-import { RESPONSE_DATA_STRATEGIES } from './response-processing.service';
+import {
+  RESPONSE_DATA_STRATEGIES,
+  ResponseProcessingService,
+} from './response-processing.service';
 import { EfficiencyAnalizerStrategy } from 'src/processing/strategies/efficiency-analyzer.strategy';
+import { RetrieveDataService } from './retrieve-data.service';
 
 @Module({
   imports: [RepositoriesModule],
 
   providers: [
-    SensorProcessingService,
+    SensorProcessingService, // register as injectable
+    ResponseProcessingService, // register as injectable
+    RetrieveDataService, // register as injectable
     DesiredTempModeStrategy,
     CurrentTempStatsStrategy,
+    EfficiencyAnalizerStrategy,
 
     {
       provide: INCOMING_SENSOR_DATA_STRATEGIES,
@@ -36,6 +43,11 @@ import { EfficiencyAnalizerStrategy } from 'src/processing/strategies/efficiency
     },
   ],
 
-  exports: [SensorProcessingService],
+  // export for controller module
+  exports: [
+    SensorProcessingService,
+    ResponseProcessingService,
+    RetrieveDataService,
+  ],
 })
 export class ServicesModule {}

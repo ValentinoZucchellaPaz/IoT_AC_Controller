@@ -15,15 +15,21 @@ export class ResponseProcessingService {
     >[],
   ) {}
 
-  async processIncomingData(
-    input: ProcessedSensorData[],
-  ): Promise<HistoryReadingsDto> {
+  /**
+   * Applies efficiency analizer strategies to history data:
+   *
+   * Searches for continuous ac_state=true samples, then determines the period efficiency considering the time needed to reach the desired temp:
+   * - 0: HIGH_EFFICIENCY -> less than 10min
+   * - 1: MEDIUM_EFFICIENCY -> less than 30min
+   * - 2: LOW_EFFICIENCY -> more than 30min
+   */
+  processIncomingData(input: ProcessedSensorData[]): HistoryReadingsDto {
     const output = new HistoryReadingsDto();
 
     this.strategies.forEach((s) => {
       s.process(input, output);
     });
 
-    return await new Promise((res) => res(output));
+    return output;
   }
 }
