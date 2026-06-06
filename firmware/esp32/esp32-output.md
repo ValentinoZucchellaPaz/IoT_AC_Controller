@@ -1,0 +1,649 @@
+# 📁 PROJECT EXPORT FOR LLMs
+
+## 📊 Project Information
+
+- **Project Name**: `esp32`
+- **Generated On**: 2026-06-06 20:49:12 (America/Buenos_Aires / GMT-03:00)
+- **Total Files Processed**: 13
+- **Export Tool**: Easy Whole Project to Single Text File for LLMs v1.1.0
+- **Tool Author**: Jota / José Guilherme Pandolfi
+
+### ⚙️ Export Configuration
+
+| Setting | Value |
+|---------|-------|
+| Language | `en` |
+| Max File Size | `1 MB` |
+| Include Hidden Files | `false` |
+| Output Format | `both` |
+
+## 🌳 Project Structure
+
+```
+├── 📁 include/
+│   ├── 📁 network/
+│   │   ├── 📄 network_client.hpp (2.14 KB)
+│   │   └── 📄 network_types.hpp (360 B)
+│   ├── 📁 sensors/
+│   │   ├── 📄 mock_sensor_model.hpp (1.14 KB)
+│   │   ├── 📄 sensor_service.hpp (1.12 KB)
+│   │   └── 📄 sensor_types.hpp (665 B)
+│   ├── 📄 app_config.hpp (1.15 KB)
+│   └── 📄 interrupt_handlers.hpp (131 B)
+├── 📁 src/
+│   ├── 📁 network/
+│   │   └── 📄 networkClient.cpp (4.14 KB)
+│   ├── 📁 sensors/
+│   │   └── 📄 sensorService.cpp (882 B)
+│   └── 📄 main.cpp (3.06 KB)
+├── 📁 test/
+│   └── 📁 test_mock_sensor_model/
+│       └── 📄 test_main.cpp (1.24 KB)
+├── 📄 platformio.ini (651 B)
+└── 📄 readme.md (1.54 KB)
+```
+
+## 📑 Table of Contents
+
+**Project Files:**
+
+- [📄 src/network/networkClient.cpp](#📄-src-network-networkclient-cpp)
+- [📄 src/sensors/sensorService.cpp](#📄-src-sensors-sensorservice-cpp)
+- [📄 src/main.cpp](#📄-src-main-cpp)
+- [📄 test/test_mock_sensor_model/test_main.cpp](#📄-test-test-mock-sensor-model-test-main-cpp)
+- [📄 platformio.ini](#📄-platformio-ini)
+- [📄 readme.md](#📄-readme-md)
+
+---
+
+## 📈 Project Statistics
+
+| Metric | Count |
+|--------|-------|
+| Total Files | 13 |
+| Total Directories | 8 |
+| Text Files | 6 |
+| Binary Files | 7 |
+| Total Size | 18.16 KB |
+
+### 📄 File Types Distribution
+
+| Extension | Count |
+|-----------|-------|
+| `.hpp` | 7 |
+| `.cpp` | 4 |
+| `.ini` | 1 |
+| `.md` | 1 |
+
+## 💻 File Code Contents
+
+## 🚫 Binary/Excluded Files
+
+The following files were not included in the text content:
+
+- `include/network/network_client.hpp`
+- `include/network/network_types.hpp`
+
+## 🚫 Binary/Excluded Files
+
+The following files were not included in the text content:
+
+- `include/sensors/mock_sensor_model.hpp`
+- `include/sensors/sensor_service.hpp`
+- `include/sensors/sensor_types.hpp`
+
+## 🚫 Binary/Excluded Files
+
+The following files were not included in the text content:
+
+- `include/app_config.hpp`
+- `include/interrupt_handlers.hpp`
+
+### <a id="📄-src-network-networkclient-cpp"></a>📄 `src/network/networkClient.cpp`
+
+**File Info:**
+- **Size**: 4.14 KB
+- **Extension**: `.cpp`
+- **Language**: `cpp`
+- **Location**: `src/network/networkClient.cpp`
+- **Relative Path**: `src/network`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-06 20:48:50 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `0113fe11338d91fab271bd24b52ea6f4`
+- **SHA256**: `779bb4f9e4852d6cdcc4d07b0ae4bbc0eab5d6d7a29e717bb7dd6e713bb3bd0c`
+- **Encoding**: ASCII
+
+**File code content:**
+
+```cpp
+#include "network/network_client.hpp"
+
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
+#include <WiFi.h>
+
+auto constexpr WIFI_CONNECTION_TIMEOUT_MS = 15000UL;
+auto constexpr HTTP_STATUS_OK = 200;
+auto constexpr HTTP_STATUS_MULTIPLE_CHOICES = 300;
+
+namespace network {
+
+    NetworkClient::NetworkClient(const app::AppConfig& config)
+        : config_(config)
+    {
+    }
+
+    void NetworkClient::begin()
+    {
+        connectToWifi();
+    }
+
+    void NetworkClient::ensureWifiConnection()
+    {
+        if (WiFi.status() != WL_CONNECTED)
+        {
+            connectToWifi();
+        }
+    }
+
+    bool NetworkClient::isConnected() const
+    {
+        return WiFi.status() == WL_CONNECTED;
+    }
+
+    bool NetworkClient::postSensorReading(const sensors::SensorReading& reading)
+    {
+        if (!isConnected())
+        {
+            return false;
+        }
+
+        HTTPClient http;
+        const String endpoint = String(config_.backendBaseUrl) + "/sensors";
+
+        if (!http.begin(endpoint))
+        {
+            logMessage("Could not open telemetry endpoint.");
+            return false;
+        }
+
+        http.addHeader("Content-Type", "application/json");
+
+        JsonDocument payload;
+        payload["deviceId"] = reading.deviceId;
+        //payload["sensorId"] = reading.sensorId;
+        //payload["temperature"] = reading.temperature;
+        //payload["humidity"] = reading.humidity;
+
+        String body;
+        serializeJson(payload, body);
+
+        const int statusCode = http.POST(body);
+        const String responseBody = http.getString();
+        http.end();
+
+        if (statusCode >= HTTP_STATUS_OK && statusCode < HTTP_STATUS_MULTIPLE_CHOICES)
+        {
+            //logMessage("Telemetry sent. temp=" + String(reading.temperature, 1) + "C humidity=" +
+                       //String(reading.humidity, 1) + "%");
+            return true;
+        }
+
+        logMessage("Telemetry failed. HTTP " + String(statusCode) + " body=" + responseBody);
+        return false;
+    }
+
+    LedState NetworkClient::fetchLedState()
+    {
+        LedState nextState{false, false};
+
+        if (!isConnected())
+        {
+            return nextState;
+        }
+
+        HTTPClient http;
+        const String endpoint = String(config_.backendBaseUrl) + "/devices/" + config_.deviceId + "/led";
+
+        if (!http.begin(endpoint))
+        {
+            logMessage("Could not open LED control endpoint.");
+            return nextState;
+        }
+
+        const int statusCode = http.GET();
+        const String responseBody = http.getString();
+        http.end();
+
+        if (statusCode < HTTP_STATUS_OK || statusCode >= HTTP_STATUS_MULTIPLE_CHOICES)
+        {
+            logMessage("LED state fetch failed. HTTP " + String(statusCode) + " body=" + responseBody);
+            return nextState;
+        }
+
+        JsonDocument payload;
+        const DeserializationError error = deserializeJson(payload, responseBody);
+        if (error)
+        {
+            logMessage("LED state JSON parse failed.");
+            return nextState;
+        }
+
+        nextState.enabled = payload["enabled"] | false;
+        nextState.known = true;
+        return nextState;
+    }
+
+    void NetworkClient::connectToWifi()
+    {
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            return;
+        }
+
+        logMessage("Connecting to Wi-Fi...");
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(config_.wifiSsid, config_.wifiPassword);
+
+        const unsigned long startedAt = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - startedAt < WIFI_CONNECTION_TIMEOUT_MS)
+        {
+            delay(500);
+            Serial.print('.');
+        }
+        Serial.println();
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            logMessage("Wi-Fi connected. IP: " + WiFi.localIP().toString());
+            return;
+        }
+
+        logMessage("Wi-Fi connection failed. Will retry on next loop.");
+    }
+
+    void NetworkClient::logMessage(const String& message)
+    {
+        Serial.println(String("[ESP32] ") + message);
+    }
+
+}  // namespace network
+
+```
+
+---
+
+### <a id="📄-src-sensors-sensorservice-cpp"></a>📄 `src/sensors/sensorService.cpp`
+
+**File Info:**
+- **Size**: 882 B
+- **Extension**: `.cpp`
+- **Language**: `cpp`
+- **Location**: `src/sensors/sensorService.cpp`
+- **Relative Path**: `src/sensors`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-06 20:48:51 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `4afdc18d67af18810a874659ee547875`
+- **SHA256**: `6153ec509bbaaadbc2ade41125f71cd982dfeb4d9416aaa7fd3d20a37cfd7936`
+- **Encoding**: ASCII
+
+**File code content:**
+
+```cpp
+#include "sensors/sensor_service.hpp"
+
+#include "sensors/mock_sensor_model.hpp"
+#include "interrupt_handlers.hpp"
+
+namespace sensors {
+
+    SensorService::SensorService(const app::AppConfig& config)
+        : config_(config)
+    {
+    }
+
+    void SensorService::begin()
+    {
+        // Initialize physical sensor drivers here when replacing the mock source.
+
+    }
+
+    SensorReading SensorService::read() const
+    {
+        // Mock telemetry for the integration baseline.
+        const float elapsedSeconds = millis() / 1000.0f;
+        const MockSensorSample sample = MockSensorModel::sampleAt(elapsedSeconds);
+
+        return {
+            config_.deviceId,
+            //current_temperature,
+           // desired_temperature,
+            //valid_samples,
+            //ts_end,
+            acState,
+        };
+    }
+
+}  // namespace sensors
+
+```
+
+---
+
+### <a id="📄-src-main-cpp"></a>📄 `src/main.cpp`
+
+**File Info:**
+- **Size**: 3.06 KB
+- **Extension**: `.cpp`
+- **Language**: `cpp`
+- **Location**: `src/main.cpp`
+- **Relative Path**: `src`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-06 20:48:52 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `9f095bc61a7ebaf072588db5593c75ed`
+- **SHA256**: `0b566b0ccb0252f02fb70e5068795531b1a48170e88a513997a543f7367a35ff`
+- **Encoding**: ASCII
+
+**File code content:**
+
+```cpp
+#include <Arduino.h>
+
+#include "app_config.hpp"
+#include "network/network_client.hpp"
+#include "network/network_types.hpp"
+#include "sensors/sensor_service.hpp"
+#include "interrupt_handlers.hpp"
+
+auto constexpr SERIAL_BAUD_RATE = 115200;
+auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
+volatile AcState acState = AcState::ACTIVE;
+
+namespace {
+
+    network::NetworkClient networkClient(app::CONFIG);
+    sensors::SensorService sensorService(app::CONFIG);
+
+    unsigned long lastTelemetryAt = 0;
+    unsigned long lastLedPollAt = 0;
+    network::LedState currentLedState{false, false};
+
+    void applyLedState(const network::LedState& ledState)
+    {
+        digitalWrite(app::CONFIG.ledPin, ledState.enabled ? HIGH : LOW);
+    }
+
+    void handleTelemetryTask()
+    {
+        if (millis() - lastTelemetryAt < app::CONFIG.telemetryIntervalMs)
+        {
+            return;
+        }
+
+        lastTelemetryAt = millis();
+        networkClient.ensureWifiConnection();
+
+        if (!networkClient.isConnected())
+        {
+            Serial.println("[ESP32] Skipping telemetry because Wi-Fi is offline.");
+            return;
+        }
+
+        const sensors::SensorReading reading = sensorService.read();
+        networkClient.postSensorReading(reading);
+    }
+
+    void handleLedPollingTask()
+    {
+        if (millis() - lastLedPollAt < app::CONFIG.ledPollIntervalMs)
+        {
+            return;
+        }
+
+        lastLedPollAt = millis();
+        networkClient.ensureWifiConnection();
+
+        if (!networkClient.isConnected())
+        {
+            Serial.println("[ESP32] Skipping LED polling because Wi-Fi is offline.");
+            return;
+        }
+
+        const network::LedState nextState = networkClient.fetchLedState();
+        if (!nextState.known)
+        {
+            return;
+        }
+
+        if (!currentLedState.known || currentLedState.enabled != nextState.enabled)
+        {
+            applyLedState(nextState);
+            Serial.println(String("[ESP32] LED changed to ") + (nextState.enabled ? "ON" : "OFF"));
+        }
+
+        currentLedState = nextState;
+    }
+
+}  // namespace
+
+void IRAM_ATTR buttonHandler()
+{
+    if (acState == AcState::ACTIVE)
+    {
+        acState = AcState::LIGHT_SLEEP;
+        digitalWrite(app::CONFIG.ledPin, LOW);
+    }
+    else
+    {
+        acState = AcState::ACTIVE;
+        digitalWrite(app::CONFIG.ledPin, HIGH);
+    }
+}
+
+void setup()
+{
+    Serial.begin(SERIAL_BAUD_RATE);
+    pinMode(app::CONFIG.ledPin, OUTPUT);
+    //digitalWrite(app::CONFIG.ledPin, LOW);
+
+    delay(DELAY_BETWEEN_TASKS_MS*10);  // Allow time for the serial monitor to connect before printing logs.
+    Serial.println("[ESP32] Booting firmware...");
+
+    pinMode(app::CONFIG.buttonPin, INPUT_PULLUP);
+
+    attachInterrupt(
+        digitalPinToInterrupt(app::CONFIG.buttonPin),
+        buttonHandler,
+        FALLING);
+
+    //sensorService.begin();
+    //networkClient.begin();
+}
+
+void loop()
+{
+    //handleTelemetryTask();
+    //handleLedPollingTask();
+    //delay(DELAY_BETWEEN_TASKS_MS);
+}
+
+```
+
+---
+
+### <a id="📄-test-test-mock-sensor-model-test-main-cpp"></a>📄 `test/test_mock_sensor_model/test_main.cpp`
+
+**File Info:**
+- **Size**: 1.24 KB
+- **Extension**: `.cpp`
+- **Language**: `cpp`
+- **Location**: `test/test_mock_sensor_model/test_main.cpp`
+- **Relative Path**: `test/test_mock_sensor_model`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `e8592dbc8aad882e32332b082ca0c601`
+- **SHA256**: `b5ae3c6ce5ac7e14f34d000a4847d46c1833663d09d61de48a370b8c2be259cb`
+- **Encoding**: ASCII
+
+**File code content:**
+
+```cpp
+#include <cmath>
+#include <gtest/gtest.h>
+
+#include "sensors/mock_sensor_model.hpp"
+
+namespace sensors
+{
+    namespace
+    {
+
+    TEST(MockSensorModelTest, ReturnsExpectedBaselineAtZeroSeconds)
+    {
+        const MockSensorSample sample = MockSensorModel::sampleAt(0.0f);
+
+        EXPECT_FLOAT_EQ(sample.temperature, 24.5f);
+        EXPECT_NEAR(sample.humidity, 48.0f + 9.0f * std::sin(0.8f), 0.0001f);
+    }
+
+    TEST(MockSensorModelTest, ProducesValuesInsideExpectedOperatingRange)
+    {
+        for (float second = 0.0f; second <= 600.0f; second += 15.0f)
+        {
+            const MockSensorSample sample = MockSensorModel::sampleAt(second);
+
+            EXPECT_GE(sample.temperature, 21.0f);
+            EXPECT_LE(sample.temperature, 28.0f);
+            EXPECT_GE(sample.humidity, 39.0f);
+            EXPECT_LE(sample.humidity, 57.0f);
+        }
+    }
+
+    TEST(MockSensorModelTest, EvolvesOverTime)
+    {
+        const MockSensorSample initial = MockSensorModel::sampleAt(10.0f);
+        const MockSensorSample later = MockSensorModel::sampleAt(120.0f);
+
+        EXPECT_NE(initial.temperature, later.temperature);
+        EXPECT_NE(initial.humidity, later.humidity);
+    }
+
+    }  // namespace
+}  // namespace sensors
+
+```
+
+---
+
+### <a id="📄-platformio-ini"></a>📄 `platformio.ini`
+
+**File Info:**
+- **Size**: 651 B
+- **Extension**: `.ini`
+- **Language**: `text`
+- **Location**: `platformio.ini`
+- **Relative Path**: `root`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `89969df694266a266cb91005411e47c8`
+- **SHA256**: `46b3756547b4fb29995a8c27b651a87874cf160699f515d13376b49891eed226`
+- **Encoding**: ASCII
+
+**File code content:**
+
+```text
+; --- Global Project Configuration ---
+[platformio]
+default_envs = esp32dev
+description = Basic ESP32 firmware for telemetry upload and LED control
+
+
+; --- Development Environment ---
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+
+monitor_speed = 115200
+upload_speed = 921600
+
+build_flags =
+    -D CORE_DEBUG_LEVEL=3
+    -I include
+    -std=gnu++17
+
+lib_deps =
+    bblanchon/ArduinoJson@^7.4.2
+
+check_tool = cppcheck
+test_build_project_src = true
+
+[env:native_test]
+platform = native
+test_framework = googletest
+build_flags =
+    -std=gnu++17
+    -I include
+test_build_project_src = false
+
+```
+
+---
+
+### <a id="📄-readme-md"></a>📄 `readme.md`
+
+**File Info:**
+- **Size**: 1.54 KB
+- **Extension**: `.md`
+- **Language**: `text`
+- **Location**: `readme.md`
+- **Relative Path**: `root`
+- **Created**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **Modified**: 2026-06-02 16:33:12 (America/Buenos_Aires / GMT-03:00)
+- **MD5**: `b772f3ca2aba36f6aff995c4031230a5`
+- **SHA256**: `910f1ad566b66d4c08640d1fac2deafea9c8faec3edf317c3751d3dc9894cbb1`
+- **Encoding**: UTF-8
+
+**File code content:**
+
+````markdown
+# 🚀 ESP32 Firmware Project 
+
+This section contains the base structure for the development of the Final Project firmware for the **Ingeniería de Software y Hardware** course of the Computer Engineering program at FCEFyN - UNC. The project is designed under an **aligned autonomy** approach, where teams have technical freedom within the engineering best practices established by the faculty.
+
+
+## 📂 Project Structure
+
+* **`include/`**: Contains header files (`.h`).
+* **`src/`**: Directory for source code (`.cpp`). A modular division (sensors, communication, business logic) is recommended, aligned with the design and implementation process.
+* **`test/`**: Unit Tests should be implemented here.
+* **`.env.example`**: Template for managing sensitive configurations (SSID, passwords, backend IPs). **Note:** The actual `.env` file must never be uploaded to version control.
+* **`platformio.ini`**: Configuration manifest that defines hardware, dependency management, and quality analysis tools.
+
+
+## ⌨️ Useful Commands (PlatformIO CLI)
+
+For managing the software life cycle, use the following commands from the terminal:
+
+### Build and Upload Management
+* **Compile the project:**
+    `pio run`
+* **Upload firmware to the ESP32:**
+    `pio run -t upload`
+* **Serial Monitor:**
+    `pio device monitor`
+
+### Quality and Testing
+* **Run Unit Tests:**
+    `pio test`
+* **Static Code Analysis:**
+    `pio check`
+* **Clean temporary build files:**
+    `pio run -t clean`
+
+---
+**Course:** Ingeniería de Software y Hardware - FCEFyN - UNC
+````
+
+---
+

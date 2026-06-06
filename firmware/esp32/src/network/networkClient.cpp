@@ -53,9 +53,9 @@ namespace network {
 
         JsonDocument payload;
         payload["deviceId"] = reading.deviceId;
-        payload["sensorId"] = reading.sensorId;
-        payload["temperature"] = reading.temperature;
-        payload["humidity"] = reading.humidity;
+        //payload["sensorId"] = reading.sensorId;
+        //payload["temperature"] = reading.temperature;
+        //payload["humidity"] = reading.humidity;
 
         String body;
         serializeJson(payload, body);
@@ -66,8 +66,8 @@ namespace network {
 
         if (statusCode >= HTTP_STATUS_OK && statusCode < HTTP_STATUS_MULTIPLE_CHOICES)
         {
-            logMessage("Telemetry sent. temp=" + String(reading.temperature, 1) + "C humidity=" +
-                       String(reading.humidity, 1) + "%");
+            //logMessage("Telemetry sent. temp=" + String(reading.temperature, 1) + "C humidity=" +
+                       //String(reading.humidity, 1) + "%");
             return true;
         }
 

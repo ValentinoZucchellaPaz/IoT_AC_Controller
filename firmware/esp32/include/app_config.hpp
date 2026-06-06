@@ -4,6 +4,12 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+enum class AcState
+{
+    ACTIVE,
+    LIGHT_SLEEP
+};
+
 namespace app {
 
 /**
@@ -19,6 +25,7 @@ struct AppConfig {
   const char* deviceId;
   const char* sensorId;
   uint8_t ledPin;
+  uint8_t buttonPin;
   unsigned long telemetryIntervalMs;
   unsigned long ledPollIntervalMs;
 };
@@ -35,11 +42,11 @@ inline constexpr AppConfig CONFIG{
     "http://10.0.0.1:3000",
     "esp32-lab-01",
     "temperature-sensor-01",
-    LED_BUILTIN,
+    2,
+    4,
     10000UL,
     3000UL,
 };
 
 }  // namespace app
-
 #endif  // FIRMWARE_ESP32_INCLUDE_APP_CONFIG_HPP

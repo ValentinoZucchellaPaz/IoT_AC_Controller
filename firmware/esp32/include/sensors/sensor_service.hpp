@@ -2,7 +2,7 @@
 #define FIRMWARE_ESP32_INCLUDE_SENSORS_SENSOR_SERVICE_HPP
 
 #include "app_config.hpp"
-#include "sensors/sensorTypes.hpp"
+#include "sensors/sensor_types.hpp"
 
 namespace sensors {
 

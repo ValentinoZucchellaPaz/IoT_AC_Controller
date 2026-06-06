@@ -1,12 +1,14 @@
 #include <Arduino.h>
 
 #include "app_config.hpp"
-#include "network/networkClient.hpp"
-#include "network/networkTypes.hpp"
-#include "sensors/sensorService.hpp"
+#include "network/network_client.hpp"
+#include "network/network_types.hpp"
+#include "sensors/sensor_service.hpp"
+#include "interrupt_handlers.hpp"
 
 auto constexpr SERIAL_BAUD_RATE = 115200;
 auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
+volatile AcState acState = AcState::ACTIVE;
 
 namespace {
 
@@ -75,22 +77,43 @@ namespace {
 
 }  // namespace
 
+void IRAM_ATTR buttonHandler()
+{
+    if (acState == AcState::ACTIVE)
+    {
+        acState = AcState::LIGHT_SLEEP;
+        digitalWrite(app::CONFIG.ledPin, LOW);
+    }
+    else
+    {
+        acState = AcState::ACTIVE;
+        digitalWrite(app::CONFIG.ledPin, HIGH);
+    }
+}
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
     pinMode(app::CONFIG.ledPin, OUTPUT);
-    digitalWrite(app::CONFIG.ledPin, LOW);
+    //digitalWrite(app::CONFIG.ledPin, LOW);
 
     delay(DELAY_BETWEEN_TASKS_MS*10);  // Allow time for the serial monitor to connect before printing logs.
     Serial.println("[ESP32] Booting firmware...");
 
-    sensorService.begin();
-    networkClient.begin();
+    pinMode(app::CONFIG.buttonPin, INPUT_PULLUP);
+
+    attachInterrupt(
+        digitalPinToInterrupt(app::CONFIG.buttonPin),
+        buttonHandler,
+        FALLING);
+
+    //sensorService.begin();
+    //networkClient.begin();
 }
 
 void loop()
 {
-    handleTelemetryTask();
-    handleLedPollingTask();
-    delay(DELAY_BETWEEN_TASKS_MS);
+    //handleTelemetryTask();
+    //handleLedPollingTask();
+    //delay(DELAY_BETWEEN_TASKS_MS);
 }

@@ -1,6 +1,7 @@
 #include "sensors/sensor_service.hpp"
 
 #include "sensors/mock_sensor_model.hpp"
+#include "interrupt_handlers.hpp"
 
 namespace sensors {
 
@@ -12,6 +13,7 @@ namespace sensors {
     void SensorService::begin()
     {
         // Initialize physical sensor drivers here when replacing the mock source.
+
     }
 
     SensorReading SensorService::read() const
@@ -22,9 +24,11 @@ namespace sensors {
 
         return {
             config_.deviceId,
-            config_.sensorId,
-            sample.temperature,
-            sample.humidity,
+            //current_temperature,
+           // desired_temperature,
+            //valid_samples,
+            //ts_end,
+            acState,
         };
     }
 

@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+
+
+extern volatile AcState acState;
+
 namespace sensors {
 
 /**
@@ -13,9 +17,11 @@ namespace sensors {
  */
 struct SensorReading {
   String deviceId;
-  String sensorId;
-  float temperature;
-  float humidity;
+  //int current_temperature[60];
+  //int desired_temperature[60];
+  //int valid_samples;
+  //time_t ts_end;
+  AcState ac_state;
 };
 
 }  // namespace sensors

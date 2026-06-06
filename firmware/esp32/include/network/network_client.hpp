@@ -4,8 +4,8 @@
 #include <Arduino.h>
 
 #include "app_config.hpp"
-#include "network/networkTypes.hpp"
-#include "sensors/sensorTypes.hpp"
+#include "network/network_types.hpp"
+#include "sensors/sensor_types.hpp"
 
 namespace network {
 
