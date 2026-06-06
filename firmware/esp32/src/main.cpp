@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <esp_sleep.h>
 
 #include "app_config.hpp"
 #include "network/network_client.hpp"
@@ -6,10 +7,15 @@
 #include "sensors/sensor_service.hpp"
 #include "interrupt_handlers.hpp"
 
+
 auto constexpr SERIAL_BAUD_RATE = 115200;
 auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
-volatile AcState acState = AcState::ACTIVE;
+auto constexpr DEBOUNCE_MS = 200;
 
+volatile AcState acState = AcState::ACTIVE;
+volatile bool buttonPressed = false;
+
+unsigned long lastButtonTime = 0;
 namespace {
 
     network::NetworkClient networkClient(app::CONFIG);
@@ -76,19 +82,9 @@ namespace {
     }
 
 }  // namespace
-
 void IRAM_ATTR buttonHandler()
 {
-    if (acState == AcState::ACTIVE)
-    {
-        acState = AcState::LIGHT_SLEEP;
-        digitalWrite(app::CONFIG.ledPin, LOW);
-    }
-    else
-    {
-        acState = AcState::ACTIVE;
-        digitalWrite(app::CONFIG.ledPin, HIGH);
-    }
+    buttonPressed = true;
 }
 
 void setup()
@@ -113,7 +109,61 @@ void setup()
 
 void loop()
 {
-    //handleTelemetryTask();
-    //handleLedPollingTask();
-    //delay(DELAY_BETWEEN_TASKS_MS);
+    if (!buttonPressed)
+    {
+        return;
+    }
+
+    buttonPressed = false;
+
+    if (millis() - lastButtonTime < DEBOUNCE_MS)
+    {
+        return;
+    }
+
+    lastButtonTime = millis();
+
+    Serial.println("Entering LIGHT_SLEEP");
+
+    digitalWrite(app::CONFIG.ledPin, LOW);
+
+    // Esperar que se libere el botón
+    while (digitalRead(app::CONFIG.buttonPin) == LOW)
+    {
+        delay(10);
+    }
+
+    // La interrupción no hace falta durante el sleep
+    detachInterrupt(
+        digitalPinToInterrupt(app::CONFIG.buttonPin));
+
+    esp_sleep_enable_ext0_wakeup(
+        (gpio_num_t)app::CONFIG.buttonPin,
+        0);
+
+    esp_light_sleep_start();
+
+    Serial.println("Woke up");
+
+    // Esperar que el botón se suelte después del wakeup
+    while (digitalRead(app::CONFIG.buttonPin) == LOW)
+    {
+        delay(10);
+    }
+
+    delay(250);
+
+    buttonPressed = false;
+    lastButtonTime = millis();
+
+    attachInterrupt(
+        digitalPinToInterrupt(app::CONFIG.buttonPin),
+        buttonHandler,
+        FALLING);
+
+    acState = AcState::ACTIVE;
+
+    digitalWrite(app::CONFIG.ledPin, HIGH);
+
+    Serial.println("ACTIVE");
 }
