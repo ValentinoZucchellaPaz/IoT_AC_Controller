@@ -2,10 +2,7 @@
 #define FIRMWARE_ESP32_INCLUDE_SENSORS_SENSOR_TYPES_HPP
 
 #include <Arduino.h>
-
-
-
-extern volatile AcState acState;
+#include "power/power_types.hpp"
 
 namespace sensors {
 
@@ -21,7 +18,7 @@ struct SensorReading {
   //int desired_temperature[60];
   //int valid_samples;
   //time_t ts_end;
-  AcState ac_state;
+  power::AcState ac_state;
 };
 
 }  // namespace sensors

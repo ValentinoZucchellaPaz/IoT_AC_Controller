@@ -4,12 +4,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-enum class AcState
-{
-    ACTIVE,
-    LIGHT_SLEEP
-};
-
 namespace app {
 
 /**

@@ -1,25 +1,21 @@
 #include <Arduino.h>
-#include <esp_sleep.h>
 
 #include "app_config.hpp"
 #include "network/network_client.hpp"
 #include "network/network_types.hpp"
 #include "sensors/sensor_service.hpp"
-#include "interrupt_handlers.hpp"
-
+#include "power/power_manager.hpp"
 
 auto constexpr SERIAL_BAUD_RATE = 115200;
 auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
 auto constexpr DEBOUNCE_MS = 200;
 
-volatile AcState acState = AcState::ACTIVE;
-volatile bool buttonPressed = false;
-
-unsigned long lastButtonTime = 0;
 namespace {
 
+    power::PowerManager powerManager(app::CONFIG.buttonPin);
     network::NetworkClient networkClient(app::CONFIG);
-    sensors::SensorService sensorService(app::CONFIG);
+    sensors::SensorService sensorService(app::CONFIG, powerManager);
+   
 
     unsigned long lastTelemetryAt = 0;
     unsigned long lastLedPollAt = 0;
@@ -82,88 +78,20 @@ namespace {
     }
 
 }  // namespace
-void IRAM_ATTR buttonHandler()
-{
-    buttonPressed = true;
-}
 
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
-    pinMode(app::CONFIG.ledPin, OUTPUT);
-    //digitalWrite(app::CONFIG.ledPin, LOW);
 
     delay(DELAY_BETWEEN_TASKS_MS*10);  // Allow time for the serial monitor to connect before printing logs.
     Serial.println("[ESP32] Booting firmware...");
 
-    pinMode(app::CONFIG.buttonPin, INPUT_PULLUP);
-
-    attachInterrupt(
-        digitalPinToInterrupt(app::CONFIG.buttonPin),
-        buttonHandler,
-        FALLING);
-
+    powerManager.begin();
     //sensorService.begin();
     //networkClient.begin();
 }
 
 void loop()
 {
-    if (!buttonPressed)
-    {
-        return;
-    }
-
-    buttonPressed = false;
-
-    if (millis() - lastButtonTime < DEBOUNCE_MS)
-    {
-        return;
-    }
-
-    lastButtonTime = millis();
-
-    Serial.println("Entering LIGHT_SLEEP");
-
-    digitalWrite(app::CONFIG.ledPin, LOW);
-
-    // Esperar que se libere el botón
-    while (digitalRead(app::CONFIG.buttonPin) == LOW)
-    {
-        delay(10);
-    }
-
-    // La interrupción no hace falta durante el sleep
-    detachInterrupt(
-        digitalPinToInterrupt(app::CONFIG.buttonPin));
-
-    esp_sleep_enable_ext0_wakeup(
-        (gpio_num_t)app::CONFIG.buttonPin,
-        0);
-
-    esp_light_sleep_start();
-
-    Serial.println("Woke up");
-
-    // Esperar que el botón se suelte después del wakeup
-    while (digitalRead(app::CONFIG.buttonPin) == LOW)
-    {
-        delay(10);
-    }
-
-    delay(250);
-
-    buttonPressed = false;
-    lastButtonTime = millis();
-
-    attachInterrupt(
-        digitalPinToInterrupt(app::CONFIG.buttonPin),
-        buttonHandler,
-        FALLING);
-
-    acState = AcState::ACTIVE;
-
-    digitalWrite(app::CONFIG.ledPin, HIGH);
-
-    Serial.println("ACTIVE");
+    powerManager.update();
 }

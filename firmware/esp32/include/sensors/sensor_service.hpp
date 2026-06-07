@@ -3,6 +3,7 @@
 
 #include "app_config.hpp"
 #include "sensors/sensor_types.hpp"
+#include "power/power_manager.hpp"
 
 namespace sensors {
 
@@ -20,7 +21,8 @@ public:
      *
      * @param config Immutable firmware configuration.
      */
-    explicit SensorService(const app::AppConfig& config);
+    SensorService(const app::AppConfig& config,
+        power::PowerManager& powerManager);
 
     /**
      * @brief Initializes the sensor subsystem.
@@ -36,6 +38,8 @@ public:
 
 private:
     const app::AppConfig& config_;
+    power::PowerManager& powerManager_;
+
 };
 
 }  // namespace sensors

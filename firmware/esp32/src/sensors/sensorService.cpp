@@ -1,12 +1,12 @@
 #include "sensors/sensor_service.hpp"
 
 #include "sensors/mock_sensor_model.hpp"
-#include "interrupt_handlers.hpp"
+#include "power/power_manager.hpp"
 
 namespace sensors {
 
-    SensorService::SensorService(const app::AppConfig& config)
-        : config_(config)
+    SensorService::SensorService(const app::AppConfig& config, power::PowerManager& powerManager)
+        : config_(config),powerManager_(powerManager)
     {
     }
 
@@ -28,7 +28,7 @@ namespace sensors {
            // desired_temperature,
             //valid_samples,
             //ts_end,
-            acState,
+            powerManager_.state(),
         };
     }
 
