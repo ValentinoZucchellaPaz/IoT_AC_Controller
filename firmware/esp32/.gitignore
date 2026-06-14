@@ -1,0 +1,4 @@
+.env
+include/config_local.hpp
+esp32-output.md
+esp32-output.txt

@@ -2,6 +2,7 @@
 #define FIRMWARE_ESP32_INCLUDE_NETWORK_NETWORK_CLIENT_HPP
 
 #include <Arduino.h>
+#include <PubSubClient.h>
 
 #include "app_config.hpp"
 #include "network/network_types.hpp"
@@ -31,9 +32,21 @@ public:
     void begin();
 
     /**
+     * @brief Reconnects MQTT then subscribe to devices/ESP32_01/led and publish
+     * in sensor/status
+     */
+    void ensureMqttConnection();
+
+    /**
      * @brief Reconnects to Wi-Fi when the device is offline.
      */
     void ensureWifiConnection();
+
+    /**
+     * @brief Notify to the broker to keep connection then receive the payload if
+     * there is one from the subscribed topic and call callback()
+     */
+    void loop();
 
     /**
      * @brief Indicates whether Wi-Fi is currently available.
@@ -52,12 +65,8 @@ public:
      */
     bool postSensorReading(const sensors::SensorReading& reading);
 
-    /**
-     * @brief Fetches the desired LED state from the backend.
-     *
-     * @return LedState Parsed LED state response.
-     */
-    LedState fetchLedState();
+    String statusTopic = String("sensor/status");
+    String dataTopic = String("sensor/datos");
 
 private:
     /**

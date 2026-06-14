@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#include "config_local.hpp"
+
 namespace app {
 
 /**
@@ -18,8 +20,14 @@ struct AppConfig {
   const char* backendBaseUrl;
   const char* deviceId;
   const char* sensorId;
+
+  const char* mqttBroker;
+  uint16_t mqttPort;
   uint8_t ledPin;
   uint8_t buttonPin;
+  uint8_t desiredTemperaturePin;
+  uint8_t dhtSensorPin;
+  
   unsigned long telemetryIntervalMs;
   unsigned long ledPollIntervalMs;
 };
@@ -31,13 +39,17 @@ struct AppConfig {
  * backend base URL, and device identifiers before deploying.
  */
 inline constexpr AppConfig CONFIG{
-    "YOUR_WIFI_SSID",
-    "YOUR_WIFI_PASSWORD",
-    "http://10.0.0.1:3000",
-    "esp32-lab-01",
-    "temperature-sensor-01",
+    WIFI_SSID,
+    WIFI_PASS,
+    BACKEND_URL,
+    DEVICE_ID,
+    SENSOR_ID,
+    MQTT_BROKER,
+    1883,
     2,
     4,
+    36, // Potentiometer for desired temperature
+    27, // DHT11 sensor
     10000UL,
     3000UL,
 };

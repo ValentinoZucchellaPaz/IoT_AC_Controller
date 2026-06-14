@@ -4,10 +4,13 @@
 
 namespace power {
 
+/**
+ * @brief State of function of the ESP32
+ */
 enum class AcState
 {
-    ACTIVE,
-    LIGHT_SLEEP
+    SLEEP,
+    ACTIVE
 };
 
 }

@@ -2,22 +2,104 @@
 
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ctime>
 
 auto constexpr WIFI_CONNECTION_TIMEOUT_MS = 15000UL;
-auto constexpr HTTP_STATUS_OK = 200;
-auto constexpr HTTP_STATUS_MULTIPLE_CHOICES = 300;
+
 
 namespace network {
+
+    WiFiClient wifiClient;
+    PubSubClient mqttClient(wifiClient);    
 
     NetworkClient::NetworkClient(const app::AppConfig& config)
         : config_(config)
     {
     }
+    static bool ledEnabled = false;
+
+    void mqttCallback(
+        char* topic,
+        byte* payload,
+        unsigned int length)
+    {
+        String msg;
+
+        for (unsigned int i = 0; i < length; i++)
+        {
+            msg += (char)payload[i];
+        }
+
+        JsonDocument doc;
+
+        if (deserializeJson(doc, msg))
+        {
+            return;
+        }
+
+        ledEnabled = doc["enabled"] | false;
+    }
 
     void NetworkClient::begin()
     {
         connectToWifi();
+
+        mqttClient.setServer(
+        config_.mqttBroker,
+        config_.mqttPort);
+
+        mqttClient.setCallback(mqttCallback);
+
+        mqttClient.setBufferSize(1024);
+
+    }
+
+    void NetworkClient::ensureMqttConnection()
+    {
+        while (!mqttClient.connected())
+        {
+            Serial.println("[ESP32] Connecting MQTT...");
+
+            String willPayload =
+            String("{\"device_id\":\"") +
+            config_.deviceId +
+            "\",\"status\":\"false\"}";
+            
+            if (mqttClient.connect(
+                config_.deviceId,
+                statusTopic.c_str(),
+                1,
+                true,
+                willPayload.c_str()))
+            {
+                Serial.println("[ESP32] MQTT connected");
+                /*
+                    Subscribe to sensor/datos
+                */
+                String topic =
+                    String("devices/")
+                    + config_.deviceId
+                    + "/led";
+
+                mqttClient.subscribe(topic.c_str());
+
+                JsonDocument payload;
+
+                payload["device_id"] = "ESP32_01";
+                payload["status"] = "true";
+
+                String body;
+
+                serializeJson(payload, body);
+
+                bool ok = mqttClient.publish(statusTopic.c_str(), body.c_str());
+            }
+            else
+            {
+                delay(2000);
+            }
+        }
     }
 
     void NetworkClient::ensureWifiConnection()
@@ -33,88 +115,48 @@ namespace network {
         return WiFi.status() == WL_CONNECTED;
     }
 
-    bool NetworkClient::postSensorReading(const sensors::SensorReading& reading)
+    bool NetworkClient::postSensorReading(
+        const sensors::SensorReading& reading)
     {
-        if (!isConnected())
-        {
-            return false;
-        }
-
-        HTTPClient http;
-        const String endpoint = String(config_.backendBaseUrl) + "/sensors";
-
-        if (!http.begin(endpoint))
-        {
-            logMessage("Could not open telemetry endpoint.");
-            return false;
-        }
-
-        http.addHeader("Content-Type", "application/json");
+        
+        
 
         JsonDocument payload;
-        payload["deviceId"] = reading.deviceId;
-        //payload["sensorId"] = reading.sensorId;
-        //payload["temperature"] = reading.temperature;
-        //payload["humidity"] = reading.humidity;
 
+        time_t timestamp = std::time(nullptr);
+
+        payload["device_id"] = reading.deviceId;
+        payload["valid_samples"] = reading.valid_samples;
+        payload["ts_end"] = (long long)timestamp;
+        payload["ac_state"] = static_cast<bool>(reading.ac_state);
+        payload["current_humidity"] = reading.current_humidity;
+
+        JsonArray currentTemps =
+            payload["current_temperature"].to<JsonArray>();
+
+        for (int i = 0; i < 20; i++) {
+            currentTemps.add(reading.current_temperature[i]);
+        }
+
+        JsonArray desiredTemps =
+            payload["desired_temperature"].to<JsonArray>();
+
+        for (int i = 0; i < 20; i++) {
+            desiredTemps.add(reading.desired_temperature[i]);
+        }
+
+        
         String body;
         serializeJson(payload, body);
 
-        const int statusCode = http.POST(body);
-        const String responseBody = http.getString();
-        http.end();
+        bool ok = mqttClient.publish(dataTopic.c_str(), body.c_str());
 
-        if (statusCode >= HTTP_STATUS_OK && statusCode < HTTP_STATUS_MULTIPLE_CHOICES)
-        {
-            //logMessage("Telemetry sent. temp=" + String(reading.temperature, 1) + "C humidity=" +
-                       //String(reading.humidity, 1) + "%");
-            return true;
-        }
+        Serial.print("Publish result: ");
+        Serial.println(ok);
 
-        logMessage("Telemetry failed. HTTP " + String(statusCode) + " body=" + responseBody);
-        return false;
+        return ok;
     }
 
-    LedState NetworkClient::fetchLedState()
-    {
-        LedState nextState{false, false};
-
-        if (!isConnected())
-        {
-            return nextState;
-        }
-
-        HTTPClient http;
-        const String endpoint = String(config_.backendBaseUrl) + "/devices/" + config_.deviceId + "/led";
-
-        if (!http.begin(endpoint))
-        {
-            logMessage("Could not open LED control endpoint.");
-            return nextState;
-        }
-
-        const int statusCode = http.GET();
-        const String responseBody = http.getString();
-        http.end();
-
-        if (statusCode < HTTP_STATUS_OK || statusCode >= HTTP_STATUS_MULTIPLE_CHOICES)
-        {
-            logMessage("LED state fetch failed. HTTP " + String(statusCode) + " body=" + responseBody);
-            return nextState;
-        }
-
-        JsonDocument payload;
-        const DeserializationError error = deserializeJson(payload, responseBody);
-        if (error)
-        {
-            logMessage("LED state JSON parse failed.");
-            return nextState;
-        }
-
-        nextState.enabled = payload["enabled"] | false;
-        nextState.known = true;
-        return nextState;
-    }
 
     void NetworkClient::connectToWifi()
     {
@@ -149,4 +191,8 @@ namespace network {
         Serial.println(String("[ESP32] ") + message);
     }
 
+    void NetworkClient::loop()
+    {
+        mqttClient.loop();
+    }
 }  // namespace network

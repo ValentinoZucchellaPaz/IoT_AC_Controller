@@ -9,31 +9,23 @@
 auto constexpr SERIAL_BAUD_RATE = 115200;
 auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
 auto constexpr DEBOUNCE_MS = 200;
+unsigned long lastSampleTime = 0;
+
+unsigned long sleepInterval = 300000;
+unsigned long activeInterval = 60000;
 
 namespace {
 
     power::PowerManager powerManager(app::CONFIG.buttonPin);
     network::NetworkClient networkClient(app::CONFIG);
-    sensors::SensorService sensorService(app::CONFIG, powerManager);
+    sensors::SensorService sensorService(app::CONFIG);
    
 
-    unsigned long lastTelemetryAt = 0;
-    unsigned long lastLedPollAt = 0;
-    network::LedState currentLedState{false, false};
-
-    void applyLedState(const network::LedState& ledState)
-    {
-        digitalWrite(app::CONFIG.ledPin, ledState.enabled ? HIGH : LOW);
-    }
+    unsigned long lastTelemetryAt = -activeInterval;
 
     void handleTelemetryTask()
     {
-        if (millis() - lastTelemetryAt < app::CONFIG.telemetryIntervalMs)
-        {
-            return;
-        }
 
-        lastTelemetryAt = millis();
         networkClient.ensureWifiConnection();
 
         if (!networkClient.isConnected())
@@ -41,57 +33,86 @@ namespace {
             Serial.println("[ESP32] Skipping telemetry because Wi-Fi is offline.");
             return;
         }
-
-        const sensors::SensorReading reading = sensorService.read();
+        const auto acState = powerManager.state();
+        const sensors::SensorReading reading = sensorService.read(acState);
+        networkClient.ensureMqttConnection();
         networkClient.postSensorReading(reading);
     }
 
-    void handleLedPollingTask()
+    void syncTime()
     {
-        if (millis() - lastLedPollAt < app::CONFIG.ledPollIntervalMs)
-        {
-            return;
-        }
+    configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
 
-        lastLedPollAt = millis();
-        networkClient.ensureWifiConnection();
+    struct tm timeinfo;
 
-        if (!networkClient.isConnected())
-        {
-            Serial.println("[ESP32] Skipping LED polling because Wi-Fi is offline.");
-            return;
-        }
-
-        const network::LedState nextState = networkClient.fetchLedState();
-        if (!nextState.known)
-        {
-            return;
-        }
-
-        if (!currentLedState.known || currentLedState.enabled != nextState.enabled)
-        {
-            applyLedState(nextState);
-            Serial.println(String("[ESP32] LED changed to ") + (nextState.enabled ? "ON" : "OFF"));
-        }
-
-        currentLedState = nextState;
+    while (!getLocalTime(&timeinfo, 10000))
+    {
+        Serial.println("[ESP32] Waiting for NTP time...");
     }
 
-}  // namespace
+    Serial.println("[ESP32] Time synced");
+    }
 
-void setup()
-{
-    Serial.begin(SERIAL_BAUD_RATE);
-
-    delay(DELAY_BETWEEN_TASKS_MS*10);  // Allow time for the serial monitor to connect before printing logs.
-    Serial.println("[ESP32] Booting firmware...");
-
-    powerManager.begin();
-    //sensorService.begin();
-    //networkClient.begin();
 }
+    void setup()
+    {
+        Serial.begin(SERIAL_BAUD_RATE);
+
+        delay(DELAY_BETWEEN_TASKS_MS*10);  // Allow time for the serial monitor to connect before printing logs.
+        Serial.println("[ESP32] Booting firmware...");
+        
+        powerManager.begin();
+        sensorService.begin();
+        networkClient.begin();
+        syncTime();   
+        networkClient.ensureMqttConnection();
+    }
 
 void loop()
 {
+    if(powerManager.getButtonPressed()){
+
+        handleTelemetryTask();
+        sensorService.clearSamples();
+
+    }
     powerManager.update();
+
+    const unsigned long samplingPeriod =
+        powerManager.getSamplingPeriod();
+        
+    if (millis() - lastSampleTime >= samplingPeriod)
+    {
+        lastSampleTime += samplingPeriod;
+
+        sensorService.temperatureSample();
+
+        if(sensorService.isBufferFull())
+        {
+            sensorService.sampleCurrentHumidity();
+            Serial.print(" Hum: ");
+            Serial.println(sensorService.currentHumidity());
+            Serial.println("BUFFER FULL");
+            networkClient.ensureWifiConnection();
+
+            networkClient.loop();
+    
+            handleTelemetryTask();
+            
+            sensorService.clearSamples();
+        }
+
+         size_t i = 0;
+
+         if (sensorService.validSamples() > 0)
+         {
+             i = sensorService.validSamples() - 1;
+         }
+
+         Serial.print("Desired: ");
+         Serial.print(sensorService.desiredTemperatures()[i]);
+
+         Serial.print(" Temp: ");
+         Serial.println(sensorService.currentTemperatures()[i]);
+    }
 }

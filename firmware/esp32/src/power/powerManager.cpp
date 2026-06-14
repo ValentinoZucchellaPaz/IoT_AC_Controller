@@ -25,7 +25,6 @@ void PowerManager::begin()
     pinMode(STATUS_LED_PIN, OUTPUT);
 
     digitalWrite(STATUS_LED_PIN, HIGH);
-
     attachInterrupt(
         digitalPinToInterrupt(buttonPin_),
         isr,
@@ -37,12 +36,12 @@ void IRAM_ATTR PowerManager::isr()
     buttonPressed_ = true;
 }
 
-void PowerManager::onButtonPressed()
+void PowerManager::turnOff()
 {
-    state_ = AcState::LIGHT_SLEEP;
+    state_ = AcState::SLEEP;
 }
 
-void PowerManager::onWakeUp()
+void PowerManager::turnOn()
 {
     state_ = AcState::ACTIVE;
 }
@@ -54,35 +53,30 @@ void PowerManager::update()
         return;
     }
 
+    detachInterrupt(digitalPinToInterrupt(buttonPin_));
+
     buttonPressed_ = false;
 
     if (millis() - lastButtonTime_ < DEBOUNCE_MS)
     {
+        attachInterrupt(digitalPinToInterrupt(buttonPin_), isr, FALLING);
         return;
     }
 
     lastButtonTime_ = millis();
 
-    onButtonPressed();
-
-    Serial.println("Entering LIGHT_SLEEP");
-
-    while (digitalRead(buttonPin_) == LOW)
+    if (state_ == AcState::ACTIVE)
     {
-        delay(10);
+        turnOff();
+        Serial.println("Entering SLEEP");
+        digitalWrite(STATUS_LED_PIN, LOW);
     }
-
-    digitalWrite(STATUS_LED_PIN, LOW);
-
-    esp_sleep_enable_ext0_wakeup(
-        static_cast<gpio_num_t>(buttonPin_),
-        0);
-
-    esp_light_sleep_start();
-
-    digitalWrite(STATUS_LED_PIN, HIGH);
-
-    Serial.println("Woke up");
+    else
+    {
+        turnOn();
+        Serial.println("Woke up");
+        digitalWrite(STATUS_LED_PIN, HIGH);
+    }
 
     while (digitalRead(buttonPin_) == LOW)
     {
@@ -91,14 +85,32 @@ void PowerManager::update()
 
     delay(250);
 
+    buttonPressed_ = false;
     lastButtonTime_ = millis();
 
-    onWakeUp();
+    attachInterrupt(digitalPinToInterrupt(buttonPin_), isr, FALLING);
+       
 }
 
 AcState PowerManager::state() const
 {
     return state_;
+}
+
+unsigned long PowerManager::getSamplingPeriod() const
+{
+    if(state_ == AcState::ACTIVE)
+    {
+        return 3000UL;
+    }
+    else
+    {
+        return 15000UL;
+    }
+}
+bool PowerManager::getButtonPressed()
+{
+    return buttonPressed_;
 }
 
 }

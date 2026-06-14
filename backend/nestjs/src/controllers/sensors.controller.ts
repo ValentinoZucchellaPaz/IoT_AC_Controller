@@ -14,6 +14,7 @@ export class SensorsController {
   async createFromMqtt(@Payload() dto: CreateSensorDto) {
     try {
       await this.sensorDataProcessor.processIncomingData(dto);
+      this.logger.log("MQTT ${'sensor/datos'}: ",dto);
     } catch (error) {
       this.logger.error("MQTT ${'sensor/datos'}: ", error);
     }

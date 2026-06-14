@@ -14,10 +14,10 @@ namespace sensors {
  */
 struct SensorReading {
   String deviceId;
-  //int current_temperature[60];
-  //int desired_temperature[60];
-  //int valid_samples;
-  //time_t ts_end;
+  float current_temperature[20];
+  int desired_temperature[20];
+  float current_humidity;
+  int valid_samples;
   power::AcState ac_state;
 };
 
