@@ -3,6 +3,8 @@ import { CreateSensorDto } from '../models/dto/create-sensor.dto';
 import { ProcessDataStrategy } from '../processing/interfaces/process-data.strategy';
 import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
 import { SensorsRepository } from 'src/repositories/sensors.repository';
+import { HealthSensorDto } from 'src/models/dto/health-sensor.dto';
+import { HealthSensorData } from 'src/models/entities/health-sensor.entity';
 
 export const INCOMING_SENSOR_DATA_STRATEGIES =
   'INCOMING_SENSOR_DATA_STRATEGIES';
@@ -26,6 +28,7 @@ export class SensorProcessingService {
     const output = new ProcessedSensorData();
 
     output.device_id = input.device_id;
+    output.current_humidity = input.current_humidity;
     output.ac_state = input.ac_state;
     output.ts_end = new Date(input.ts_end * 1000); // parse Unix Timestamp to datetime
 
@@ -33,6 +36,16 @@ export class SensorProcessingService {
       s.process(input, output);
     });
 
-    return this.sensorsRepository.save(output);
+    return this.sensorsRepository.saveData(output);
+  }
+
+  async saveSensorStatus(dto: HealthSensorDto): Promise<HealthSensorData> {
+    const entity = new HealthSensorData();
+
+    entity.device_id = dto.device_id;
+    entity.status = dto.status;
+    entity.ts_end = new Date();
+
+    return await this.sensorsRepository.saveStatus(entity);
   }
 }

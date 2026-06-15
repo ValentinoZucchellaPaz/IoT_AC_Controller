@@ -9,6 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService); // get env vars
 
+  // enable CORS for localhost frontend
+  app.enableCors();
+
   // validates DTO's pipeline
   app.useGlobalPipes(
     new ValidationPipe({
@@ -19,7 +22,6 @@ async function bootstrap() {
 
   // use global error handler
   app.useGlobalFilters(new GlobalExceptionFilter());
-  
   // subscribe to MQTT broker
   app.connectMicroservice(
     {

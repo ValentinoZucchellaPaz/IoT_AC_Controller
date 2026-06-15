@@ -28,8 +28,8 @@ export class ProcessedSensorData {
   @Column('float')
   avg_temperature!: number;
 
-  // @Column('bigint')
-  // ts_end!: number;
+  @Column('float')
+  current_humidity!: number;
 
   @Column({
     type: 'timestamptz',

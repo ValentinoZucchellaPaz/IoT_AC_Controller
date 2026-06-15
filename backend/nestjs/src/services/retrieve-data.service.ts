@@ -2,14 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
 import { SensorsRepository } from 'src/repositories/sensors.repository';
 import { HistoryPeriod } from 'src/common/enum/history-period.enum';
+import { HealthSensorData } from 'src/models/entities/health-sensor.entity';
 
 @Injectable()
 export class RetrieveDataService {
   constructor(private readonly sensorsRepository: SensorsRepository) {}
 
   /**fetchs the last sample stored in db */
-  async getLast(): Promise<ProcessedSensorData | null> {
-    return this.sensorsRepository.findLast();
+  async getLastSample(): Promise<ProcessedSensorData | null> {
+    return this.sensorsRepository.findLastData();
   }
 
   /**
@@ -17,7 +18,9 @@ export class RetrieveDataService {
    * @param period: enum with all posible period (1h, 6h, 12h, 1d, 3d, 7d)
    * @returns samples: fetched that period data from db
    */
-  async getHistory(period: HistoryPeriod): Promise<ProcessedSensorData[]> {
+  async getHistorySamples(
+    period: HistoryPeriod,
+  ): Promise<ProcessedSensorData[]> {
     const toTs = Math.floor(Date.now() / 1000);
 
     let fromTs: number;
@@ -48,6 +51,11 @@ export class RetrieveDataService {
         break;
     }
 
-    return this.sensorsRepository.findHistory(fromTs, toTs);
+    return this.sensorsRepository.findHistoryData(fromTs, toTs);
+  }
+
+  /**fetchs the last sample stored in db */
+  async getLastStatus(): Promise<HealthSensorData | null> {
+    return this.sensorsRepository.findLastStatus();
   }
 }

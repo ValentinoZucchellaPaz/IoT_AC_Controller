@@ -56,12 +56,26 @@ docker ps
 cd backend/nestjs
 npm install
 npm run start
+# opcionalemente hacer seed de db aqui
+
 cd ../../frontend/dashboard
 npm install
 npm run start
 ```
 
 > En caso que se quieran actualizaciones con los cambios cuando se codea usar la alternativa `dev` en vez de `start`
+
+##### Poblar DB para pruebas
+
+En caso que se quieran hacer pruebas sin tener el ESP32 funcionando, se debe realizar la carga manual de valores al backend, lo cual en este caso se logro publicando valores al topic de MQTT (de esta manera tambien se verifica que el backend funciona bien)
+
+Luego de levantar el backend (estando en el path ./backend/nestjs) correr el siguiente comando:
+
+```bash
+npm run mqtt:seed
+```
+
+Se puede verificar la carga viendo los logs del backend
 
 ---
 

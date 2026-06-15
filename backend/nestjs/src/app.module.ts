@@ -5,6 +5,7 @@ import { Module } from '@nestjs/common';
 import appConfig from './config/app.config';
 import mqqtConfig from './config/mqqt.config';
 import { ControllersModule } from './controllers/controllers.module';
+import { HealthSensorData } from './models/entities/health-sensor.entity';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { ControllersModule } from './controllers/controllers.module';
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
 
-      entities: [ProcessedSensorData],
+      entities: [ProcessedSensorData, HealthSensorData],
 
       synchronize: true,
     }),

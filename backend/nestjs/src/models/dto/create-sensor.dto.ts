@@ -27,5 +27,8 @@ export class CreateSensorDto {
   valid_samples!: number;
 
   @IsNumber()
+  current_humidity!: number;
+
+  @IsNumber()
   ts_end!: number;
 }

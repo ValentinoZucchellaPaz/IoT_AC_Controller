@@ -38,18 +38,20 @@ export class DataController {
    */
   @Get('/last')
   async getLast(): Promise<SensorResponseDto | SensorErrorResponseDto> {
-    const lastSample = await this.retrieveDataService.getLast();
+    const lastSample = await this.retrieveDataService.getLastSample();
+    const lastStatus = await this.retrieveDataService.getLastStatus();
 
-    if (!lastSample)
+    if (!lastSample || !lastStatus)
       return new SensorErrorResponseDto(
         'NO_CONTENT',
-        'No sensor data found',
+        !lastSample ? 'No sensor data found' : 'No sensor status found',
         'No data available',
       );
 
-    const response = new SensorResponseDto(lastSample, 'ok');
+    const response = new SensorResponseDto(lastSample, lastStatus, 'ok');
 
-    // this.logger.log(`HTTP /data/last: ${JSON.stringify(response)}`);
+    this.logger.log('===========================================');
+    this.logger.log('HTTP /data/last:', response);
 
     return response;
   }
@@ -65,7 +67,7 @@ export class DataController {
     period: HistoryPeriod,
   ): Promise<SensorHistoryResponseDto | SensorErrorResponseDto> {
     // gets the data of that period (enum with all posible periods)
-    const rawData = await this.retrieveDataService.getHistory(period);
+    const rawData = await this.retrieveDataService.getHistorySamples(period);
 
     if (rawData.length == 0)
       return new SensorErrorResponseDto(
@@ -85,7 +87,8 @@ export class DataController {
       'ok',
     );
 
-    // this.logger.log("HTTP ${'/data/history'}: ", JSON.stringify(response));
+    this.logger.log('===========================================');
+    this.logger.log(`HTTP /data/history/${period}`, response);
     return response;
   }
 
