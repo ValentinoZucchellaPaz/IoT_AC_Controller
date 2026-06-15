@@ -31,6 +31,13 @@ export class SensorProcessingService {
     output.current_humidity = input.current_humidity;
     output.ac_state = input.ac_state;
     output.ts_end = new Date(input.ts_end * 1000); // parse Unix Timestamp to datetime
+    if (input.valid_samples == 0)
+      throw new Error(`Invalid Sample: ${JSON.stringify(input)}`);
+    input.current_temperature.splice(input.valid_samples);
+    input.desired_temperature.splice(input.valid_samples);
+
+    console.log('===========================================');
+    console.log("Service ${'sensor/datos'}: ", input);
 
     this.strategies.forEach((s) => {
       s.process(input, output);

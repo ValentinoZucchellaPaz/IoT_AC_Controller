@@ -1,15 +1,19 @@
-import path from "node:path";
-import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
-
-// Single source of truth: monorepo root `.env` / `.env.local` (see root `.env.example`).
-// Next still loads `frontend/dashboard/.env*` afterward if students add overrides there.
-const monorepoRoot = path.resolve(__dirname, "../..");
-loadEnvConfig(monorepoRoot);
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  // Required for the production image in `docker/nextjs.Dockerfile` (standalone server bundle).
   output: "standalone",
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:3000/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -10,3 +10,45 @@
  */
 
 export {};
+
+import { SensorResponseDTO, HistoryResponseDTO } from "../types/sensor.types";
+
+export const SensorsService = {
+  async getLatestReading(): Promise<SensorResponseDTO> {
+    try {
+      // ruting relativo en next.config.ts
+      const response = await fetch("/api/data/last", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+      const data: SensorResponseDTO = await response.json();
+      return data;
+    } catch (error) {
+      console.error("SensorsService -> getLatestReading falló:", error);
+      throw error;
+    }
+  },
+
+  async getHistory(period: string = "1d"): Promise<HistoryResponseDTO> {
+    try {
+      // Le pegamos al endpoint configurado en data.controller.ts -> @Get('/history/:period')
+      const url = `/api/data/history/${period}`; // ruting relativo en next.config.ts
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok)
+        throw new Error(
+          `Error HTTP: ${response.status} al pedir el historial.`,
+        );
+      const data: HistoryResponseDTO = await response.json();
+      return data;
+    } catch (error) {
+      console.error("SensorsService -> getHistory falló:", error);
+      throw error;
+    }
+  },
+};

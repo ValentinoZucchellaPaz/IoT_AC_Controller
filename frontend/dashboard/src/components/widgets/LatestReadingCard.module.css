@@ -1,0 +1,34 @@
+.pageContainer {
+  /* All page container*/
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1; /* background set*/
+
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* freeze background whie scrolling */
+
+  transition: background-image 0.5s ease-in-out;
+}
+
+.fondoFrio {
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.15), transparent 40%),
+    linear-gradient(180deg, #0f172a 0%, #0c4a6e 100%);
+}
+
+.fondoCalido1 {
+  background:
+    radial-gradient(circle at top, rgba(180, 120, 60, 0.12), transparent 45%),
+    linear-gradient(180deg, #1f2937 0%, #5a4633 100%);
+}
+
+.fondoCalido2 {
+  background:
+    radial-gradient(circle at top, rgba(170, 90, 50, 0.15), transparent 40%),
+    linear-gradient(180deg, #1f2937 0%, #6b3f2a 100%);
+}
