@@ -46,24 +46,33 @@ void PowerManager::turnOn()
     state_ = AcState::ACTIVE;
 }
 
-void PowerManager::update()
+bool PowerManager::update()
 {
     if (!buttonPressed_)
     {
-        return;
+        return false;
     }
 
     detachInterrupt(digitalPinToInterrupt(buttonPin_));
 
     buttonPressed_ = false;
 
-    if (millis() - lastButtonTime_ < DEBOUNCE_MS)
+    unsigned long now = millis();
+
+    if (now - lastButtonTime_ < DEBOUNCE_MS)
     {
         attachInterrupt(digitalPinToInterrupt(buttonPin_), isr, FALLING);
-        return;
+       return false;
     }
 
-    lastButtonTime_ = millis();
+    lastButtonTime_ = now;
+
+    while (digitalRead(buttonPin_) == LOW)
+    {
+        delay(5);
+    }
+
+    delay(50);
 
     if (state_ == AcState::ACTIVE)
     {
@@ -78,18 +87,12 @@ void PowerManager::update()
         digitalWrite(STATUS_LED_PIN, HIGH);
     }
 
-    while (digitalRead(buttonPin_) == LOW)
-    {
-        delay(10);
-    }
-
-    delay(250);
-
     buttonPressed_ = false;
     lastButtonTime_ = millis();
 
     attachInterrupt(digitalPinToInterrupt(buttonPin_), isr, FALLING);
-       
+
+    return true;
 }
 
 AcState PowerManager::state() const

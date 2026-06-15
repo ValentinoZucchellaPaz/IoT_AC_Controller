@@ -64,7 +64,7 @@ namespace network {
             String willPayload =
             String("{\"device_id\":\"") +
             config_.deviceId +
-            "\",\"status\":\"false\"}";
+            "\",\"status\":false}";
             
             if (mqttClient.connect(
                 config_.deviceId,
@@ -87,7 +87,7 @@ namespace network {
                 JsonDocument payload;
 
                 payload["device_id"] = "ESP32_01";
-                payload["status"] = "true";
+                payload["status"] = true;
 
                 String body;
 

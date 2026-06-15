@@ -30,7 +30,7 @@ public:
     /**
      * @brief Switch the state of ESP32
      */
-    void update();
+    bool update();
 
     /**
      * @brief Getter of state_ parameter

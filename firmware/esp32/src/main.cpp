@@ -70,13 +70,16 @@ namespace {
 
 void loop()
 {
-    if(powerManager.getButtonPressed()){
+    networkClient.loop();
 
+    bool stateChanged = powerManager.update();
+
+    if (stateChanged)
+    {
         handleTelemetryTask();
         sensorService.clearSamples();
-
     }
-    powerManager.update();
+        
 
     const unsigned long samplingPeriod =
         powerManager.getSamplingPeriod();
@@ -94,8 +97,6 @@ void loop()
             Serial.println(sensorService.currentHumidity());
             Serial.println("BUFFER FULL");
             networkClient.ensureWifiConnection();
-
-            networkClient.loop();
     
             handleTelemetryTask();
             
