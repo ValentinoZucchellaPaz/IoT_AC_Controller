@@ -2,65 +2,37 @@
 
 Este documento define las reglas de negocio, algoritmos y patrones de diseño que residen en el dominio del sistema. Esta capa representa el modelo lógico del aire acondicionado, diseñado para ser independiente de cualquier detalle de implementación externa (HTTP, base de datos, WebSockets, frontend).
 
-## 1. Entidad principal: ReadingData
+## 1. Entidad principal: ProcessedSensor
 
-El envío de datos se produce cada 1 minuto mientras esté prendido y cada 10 minutos cuando esté apagado.
- 
-Representa el estado del sistema en un instante de tiempo. Es el objeto básico de intercambio de información. 
+### 1.1. ProcessedSensor
+Representa el estado consolidado del entorno e indicadores calculados en un intervalo de tiempo.
+- **Atributos:** `device_id` (string), `ac_state` (boolean), `desired_temperature` (16-30°C), `avg_temperature` (-10 a 50°C), `humidity` (number), `ts_end` (number(timestamp)).
+- **Invariantes:** La entidad es autovalidante en su constructor de dominio. 
 
-- *Atributos:* setpoint (16-30°C), ambientTemp (-10 a 50°C), isOn (boolean), timestamp (Date).
+### 1.2. Regla de Frecuencia de Muestreo (Mantenimiento de Estado)
+El dispositivo físico (ESP32) regula el envío de cargas útiles hacia el dominio en función de su estado operativo actual para optimizar el consumo de red y el almacenamiento:
+- **Estado Encendido (`ac_state: true`):** El intervalo de publicación de lecturas al broker MQTT es estrictamente de **1 minuto**.
+- **Estado Apagado (`ac_state: false`):** El intervalo de publicación se relaja a **5 minutos**, actuando como un latido de corazón (*heartbeat*) para certificar la vitalidad del hardware sin saturar la persistencia.
 
-- *Invariantes:* La entidad es autovalidante. Si al intentar crear una instancia algún valor está fuera de rango, se rechaza la construcción (lanzando un error de dominio), asegurando que solo datos válidos fluyan por el sistema.
+### 2. Algoritmos de Procesamiento (Estrategias)
 
-## 2. Algoritmos de Dominio
+El sistema procesa las ráfagas de datos crudos provenientes del broker MQTT mediante algoritmos encapsulados que analizan las tendencias del dispositivo:
 
-- *El ESP32 envía una serie de datos al backend donde se aplican los siguientes algoritmos y puede  devolver o no información al ESP32.* 
+### 2.1. Análisis de Eficiencia (`EfficiencyAnalyzerStrategy`)
+- **Propósito:** Evaluar la velocidad y capacidad de respuesta del equipo de climatización para alcanzar el objetivo deseado, clasificando el rendimiento del compresor en niveles discretos (High, Medium, Low Efficiency).
 
-### 2.1. Control de Histéresis 
+### 2.2. Estadísticas de Temperatura Actual (`CurrentTempStatsStrategy`)
+- **Propósito:** Calcular promedios ponderados y desviaciones térmicas en tiempo real a partir de las muestras enviadas por los sensores analógicos del hardware.
 
-- *Propósito:* Evitar el ciclado corto del compresor (conmutaciones excesivas) ante variaciones mínimas de temperatura.
+### 2.3. Modo de Temperatura Deseada (`DesiredTempModeStrategy`)
+- **Propósito:** Evaluar consistencias, cambios de comportamiento del usuario y la persistencia de las consignas térmicas fijadas en el dispositivo.
 
-- *Entrada:* ReadingData actual, estado actual del AC, umbral (default 1.0°C).
-
-- *Salida:* recommendedState (boolean), deadbandActive (boolean).
-
-### 2.2. Detección de anomalía por desviación acumulada(outsider)
-
-- *Propósito:* Identificar si el equipo no está logrando enfriar o calentar según lo esperado, analizando la tendencia.
-
-- *Entrada:* Historial de ReadingData, deviationThreshold (default 2.0°C), estrategia de filtrado (Strategy).
-
-- *Salida:* hasAlert, averageDeviation, anomalyType ("overheat"/"overcool"/"normal").
-
-### 2.3. Estimación de tiempo para alcanzar setpoint
-
-- *Propósito:* Proveer una predicción al usuario sobre cuánto tiempo falta para llegar a la temperatura deseada.
-
-- *Entrada:* Lectura actual, lectura anterior, tiempo transcurrido (minutos).
-
-- *Salida:* minutesRemaining (number|null), trend, confidence.
-
-### 2.4 Algoritmo de Transformacion de Datos
-
-- *Propósito:* Obtener nuevos tipos de datos a partir de los atributos iniciales. 
-
-- *Entrada:* setpoint (16-30°C), ambientTemp (-10 a 50°C), isOn (boolean), timestamp (Date).
-
-- *Salida:* TransformedData(data|null)
 
 ## 3. Patrones de Diseño
 
 ### 3.1. Observer
 
 Permite que el dominio sea reactivo y extienda su funcionalidad sin modificar el núcleo.
-
-- *Subject:* Mantiene una lista de suscriptores y los notifica cada vez que se procesa una nueva ReadingData.
-
-- *Observer concreto 1 (LoggerObserver):* Almacena en memoria (array de strings) un registro con timestamp y los valores de cada lectura. No escribe en archivos ni en consola como parte de la lógica de negocio.
-
-- *Observer concreto 2 (AlertObserver):* Mantiene un historial en memoria de las últimas N lecturas, ejecuta el algoritmo de detección de anomalía sobre ese historial y, si corresponde, genera alertas (almacenadas en memoria). No persiste ni envía las alertas fuera del dominio.
-
-*Restricción importante:* Los observadores solo trabajan con memoria interna (arrays). No realizan operaciones de persistencia, no envían datos por red, no escriben en archivos ni en la consola del sistema (salvo para depuración temporal durante desarrollo, pero no como parte de la lógica de negocio).
 
 ### 3.2. Strategy
 
@@ -76,40 +48,18 @@ Se aplica para dar flexibilidad al procesamiento de los datos históricos.
 
 - *Uso:* El algoritmo de detección de anomalías utiliza estas estrategias para decidir qué porción del historial es relevante para el análisis actual.
 
-### 3.3. Factory Method  
-
-- *Clase AlertFactory:* Encapsula la lógica de creación de diferentes tipos de alertas detectadas por el sistema.
-
-- *Producto:* Interfaz Alert con atributos message, severity, timestamp.
-
-- *Justificación:* Centraliza la creación de alertas (createOverheatAlert, createOvercoolAlert), evitando que los observadores dependan de las clases concretas de cada mensaje de error. Permite añadir nuevos tipos de alerta sin modificar el AlertObserver.
-
-- *Uso dentro del dominio:* El AlertObserver llama a AlertFactory cuando detecta una anomalía, obteniendo una instancia de Alert sin conocer su implementación concreta.
-
 ## 4. Servicio de Dominio 
 
-Es el punto de entrada a la lógica de negocio que coordina las entidades y patrones.
+Es el punto de entrada a la lógica de negocio que coordina las entidades, los repositorios y los patrones de comportamiento.
 
-- *processNewReading(reading: ReadingData): ProcessingResult*  
+- **`SensorProcessingService` (`processIncomingData`):**
+  - Recibe la carga útil del sensor (`CreateSensorDto`) transmitida por la capa de conectividad MQTT.
+  - Ejecuta de forma secuencial y polimórfica mediante un ciclo `forEach` las estrategias de análisis inyectadas bajo el contrato `ProcessDataStrategy<I, O>`.
+  - Transforma las lecturas crudas en la estructura mapeada por la entidad de dominio y delega su persistencia al repositorio mediante `sensorsRepository.saveData(output)`.
 
-  - Recibe una nueva lectura (asume que ya está validada por su constructor).  
-
-  - Aplica los tres algoritmos usando el historial en memoria y la lectura anterior (si existe).  
-
-  - Almacena la lectura en una base de datos.
-
-  - Notifica a todos los observadores registrados (LoggerObserver y AlertObserver).  
-
-  - Devuelve ProcessingResult (contiene los resultados de los tres algoritmos y la lectura original). 
-
-- *getLiveStatus(): LiveStatus*  
-
-  - Retorna la última lectura almacenada junto con los resultados de los algoritmos recalculados sobre ella (con el historial actual). Si no hay lecturas, retorna null.
-
-- *getHistoryStatus(TimePeriod): HistoryStatus*
-
-  - Retorna los datos especificados en un periodo determinado. 
-
+- **`RetrieveDataService` (`getLastSample` / `getHistorySamples`):**
+  - **`getLastSample()`:** Retorna la última lectura consolidada del sensor procesada en tiempo real invocando a `findLastData()`. Si no existen registros, el controlador intercepta y retorna un error semántico de tipo `NO_CONTENT`.
+  - **`getHistorySamples(period)`:** Calcula los límites de tiempo Unix (`fromTs` y `toTs`) resolviendo el bloque condicional `switch(period)` según el rango solicitado (1h, 6h, 12h, 1d, 3d, 7d) y recupera la colección analítica histórica de la base de datos.
 
 ## 5. Restricciones del dominio 
 
