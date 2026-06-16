@@ -55,15 +55,14 @@ docker ps
 ```bash
 cd backend/nestjs
 npm install
-npm run start
+npm run dev
 # opcionalemente hacer seed de db aqui
 
 cd ../../frontend/dashboard
+cp .env.example .env
 npm install
-npm run start
+npm run dev
 ```
-
-> En caso que se quieran actualizaciones con los cambios cuando se codea usar la alternativa `dev` en vez de `start`
 
 ##### Poblar DB para pruebas
 
