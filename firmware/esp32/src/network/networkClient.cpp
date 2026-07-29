@@ -13,9 +13,12 @@ namespace network {
     WiFiClient wifiClient;
     PubSubClient mqttClient(wifiClient);    
 
-    NetworkClient::NetworkClient(const app::AppConfig& config)
-        : config_(config)
+    NetworkClient* NetworkClient::instance_ = nullptr;
+
+    NetworkClient::NetworkClient(const app::AppConfig& config, sensors::SensorService& sensorService)
+        : config_(config), sensorService_(sensorService)
     {
+        instance_ = this;
     }
     static bool ledEnabled = false;
 
@@ -36,6 +39,11 @@ namespace network {
         if (deserializeJson(doc, msg))
         {
             return;
+        }
+
+        if (NetworkClient::instance_)
+        {
+            NetworkClient::instance_->handleCommand(doc);
         }
 
         ledEnabled = doc["enabled"] | false;
@@ -74,15 +82,19 @@ namespace network {
                 willPayload.c_str()))
             {
                 Serial.println("[ESP32] MQTT connected");
-                /*
-                    Subscribe to sensor/datos
-                */
-                String topic =
+                        String ledTopic =
                     String("devices/")
                     + config_.deviceId
                     + "/led";
 
-                mqttClient.subscribe(topic.c_str());
+                mqttClient.subscribe(ledTopic.c_str());
+
+                String cmdTopic =
+                    String("devices/")
+                    + config_.deviceId
+                    + "/command";
+
+                mqttClient.subscribe(cmdTopic.c_str());
 
                 JsonDocument payload;
 
@@ -189,6 +201,21 @@ namespace network {
     void NetworkClient::logMessage(const String& message)
     {
         Serial.println(String("[ESP32] ") + message);
+    }
+
+    void NetworkClient::handleCommand(const JsonDocument& doc)
+    {
+        if (doc["desired_temperature"].is<int>())
+        {
+            int temp = doc["desired_temperature"].as<int>();
+
+            if (temp < 15) temp = 15;
+
+            if (temp > 32) temp = 32;
+
+            sensorService_.applyRemoteDesiredTemperature(temp);
+            logMessage("Remote temp command: " + String(temp) + "C");
+        }
     }
 
     void NetworkClient::loop()

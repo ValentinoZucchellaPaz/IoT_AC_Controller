@@ -16,9 +16,9 @@ unsigned long activeInterval = 60000;
 
 namespace {
 
-    power::PowerManager powerManager(app::CONFIG.buttonPin);
-    network::NetworkClient networkClient(app::CONFIG);
     sensors::SensorService sensorService(app::CONFIG);
+    power::PowerManager powerManager(app::CONFIG.buttonPin);
+    network::NetworkClient networkClient(app::CONFIG, sensorService);
    
 
     unsigned long lastTelemetryAt = -activeInterval;

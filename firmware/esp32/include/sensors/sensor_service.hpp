@@ -38,6 +38,20 @@ public:
     SensorReading read(power::AcState acState) const;
 
     /**
+     * @brief Overrides the desired temperature with a value received
+     * from the backend via MQTT command topic.
+     *
+     * When active, readDesiredTemperature() returns this value
+     * instead of reading the potentiometer. Resets on reboot.
+     */
+    void applyRemoteDesiredTemperature(int temp);
+
+    /**
+     * @brief Reverts to local potentiometer control.
+     */
+    void revertToLocalControl();
+
+    /**
      * @brief Reads the desired temperature from the potentiometer.
      *
      * The ADC value (0-4095) is mapped to the allowed
@@ -130,6 +144,9 @@ public:
 
 private:
     static constexpr size_t MAX_SAMPLES = 20;
+
+    int remoteDesiredTemperature_{0};
+    bool useRemoteTemperature_{false};
 
     int desiredTemperatures_[MAX_SAMPLES];
     float currentTemperatures_[MAX_SAMPLES];

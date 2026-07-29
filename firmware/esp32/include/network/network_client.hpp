@@ -6,6 +6,7 @@
 
 #include "app_config.hpp"
 #include "network/network_types.hpp"
+#include "sensors/sensor_service.hpp"
 #include "sensors/sensor_types.hpp"
 
 namespace network {
@@ -23,8 +24,9 @@ public:
      * @brief Creates the client with shared firmware configuration.
      *
      * @param config Immutable firmware configuration.
+     * @param sensorService Reference to the sensor service for applying remote commands.
      */
-    explicit NetworkClient(const app::AppConfig& config);
+    explicit NetworkClient(const app::AppConfig& config, sensors::SensorService& sensorService);
 
     /**
      * @brief Performs initial network setup.
@@ -65,6 +67,14 @@ public:
      */
     bool postSensorReading(const sensors::SensorReading& reading);
 
+    /**
+     * @brief Processes an incoming MQTT command message.
+     *
+     * Handles commands from the backend published to devices/{id}/command,
+     * such as desired_temperature overrides.
+     */
+    void handleCommand(const JsonDocument& doc);
+
     String statusTopic = String("sensor/status");
     String dataTopic = String("sensor/datos");
 
@@ -82,6 +92,9 @@ private:
     static void logMessage(const String& message);
 
     const app::AppConfig& config_;
+    sensors::SensorService& sensorService_;
+
+    static NetworkClient* instance_;
 };
 
 }  // namespace network

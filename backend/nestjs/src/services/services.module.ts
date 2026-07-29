@@ -1,5 +1,6 @@
 import { RepositoriesModule } from 'src/repositories/repositories.module';
 import { Module } from '@nestjs/common';
+import { MqttPublisherService } from './mqtt-publisher.service';
 import { DesiredTempModeStrategy } from 'src/processing/strategies/desired-temp-mode.strategy';
 import { CurrentTempStatsStrategy } from 'src/processing/strategies/current-temp-stats.strategy';
 import {
@@ -23,6 +24,7 @@ import { RetrieveDataService } from './retrieve-data.service';
     DesiredTempModeStrategy,
     CurrentTempStatsStrategy,
     EfficiencyAnalizerStrategy,
+    MqttPublisherService,
 
     {
       provide: INCOMING_SENSOR_DATA_STRATEGIES,
@@ -48,6 +50,7 @@ import { RetrieveDataService } from './retrieve-data.service';
     SensorProcessingService,
     ResponseProcessingService,
     RetrieveDataService,
+    MqttPublisherService,
   ],
 })
 export class ServicesModule {}

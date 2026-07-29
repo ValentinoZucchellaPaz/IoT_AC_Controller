@@ -39,8 +39,24 @@ namespace sensors {
         return a;
     }
 
+    void SensorService::applyRemoteDesiredTemperature(int temp)
+    {
+        remoteDesiredTemperature_ = temp;
+        useRemoteTemperature_ = true;
+    }
+
+    void SensorService::revertToLocalControl()
+    {
+        useRemoteTemperature_ = false;
+    }
+
     int SensorService::readDesiredTemperature() const
     {
+        if (useRemoteTemperature_)
+        {
+            return remoteDesiredTemperature_;
+        }
+
         const int rawValue = analogRead(config_.desiredTemperaturePin);
 
         return MIN_TEMPERATURE +
