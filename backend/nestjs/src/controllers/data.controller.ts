@@ -1,4 +1,5 @@
 import { Controller, Get, Logger, Param, ParseEnumPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { HistoryPeriod } from 'src/common/enum/history-period.enum';
 import { SensorErrorResponseDto } from 'src/models/dto/response/sensor-error-response.dto';
 import { SensorHistoryResponseDto } from 'src/models/dto/response/sensor-history-response.dto';
@@ -6,6 +7,7 @@ import { SensorResponseDto } from 'src/models/dto/response/sensor-response.dto';
 import { ResponseProcessingService } from 'src/services/response-processing.service';
 import { RetrieveDataService } from 'src/services/retrieve-data.service';
 
+@ApiTags('Sensor Data')
 @Controller('data')
 export class DataController {
   private readonly logger = new Logger(DataController.name);
@@ -32,10 +34,11 @@ export class DataController {
   //   "timestamp": "2026-06-02T06:40:06.038Z"
   //   }
 
-  /**
-   * Returns the most recent sensor sample stored in the database.
-   * Returns success=false if no data exists.
-   */
+  @ApiOperation({
+    summary: 'Get latest sensor reading',
+    description:
+      'Returns the most recent sensor sample and connectivity status from the database. Returns success=false if no data exists.',
+  })
   @Get('/last')
   async getLast(): Promise<SensorResponseDto | SensorErrorResponseDto> {
     const lastSample = await this.retrieveDataService.getLastSample();
@@ -50,23 +53,21 @@ export class DataController {
 
     const response = new SensorResponseDto(lastSample, lastStatus, 'ok');
 
-    this.logger.log('===========================================');
-    this.logger.log('HTTP /data/last:', response);
+    this.logger.log('HTTP /data/last', response);
 
     return response;
   }
 
-  /**
-   * Returns historical sensor data for the requested period.
-   * Returns success=false if no data exists.
-   * Supported periods: 1h, 6h, 12h, 1d, 3d, 7d
-   */
+  @ApiOperation({
+    summary: 'Get historical sensor data',
+    description:
+      'Returns historical sensor samples and efficiency data for the requested period. Supported periods: 1h, 6h, 12h, 1d, 3d, 7d',
+  })
   @Get('/history/:period')
   async getHistory(
-    @Param('period', new ParseEnumPipe(HistoryPeriod)) // nest default parse error handling
+    @Param('period', new ParseEnumPipe(HistoryPeriod))
     period: HistoryPeriod,
   ): Promise<SensorHistoryResponseDto | SensorErrorResponseDto> {
-    // gets the data of that period (enum with all posible periods)
     const rawData = await this.retrieveDataService.getHistorySamples(period);
 
     if (rawData.length == 0)
@@ -76,23 +77,24 @@ export class DataController {
         'No data available',
       );
 
-    // apply strategy
     const processedData =
       this.responseDataProcessor.processIncomingData(rawData);
 
-    // create response dto
     const response = new SensorHistoryResponseDto(
       processedData.samples.length,
       processedData,
       'ok',
     );
 
-    this.logger.log('===========================================');
     this.logger.log(`HTTP /data/history/${period}`, response);
     return response;
   }
 
-  // testing global error handler
+  @ApiOperation({
+    summary: 'Test error handling',
+    description:
+      'Throws a test error to verify the global exception filter works correctly.',
+  })
   @Get('/test-error')
   testError() {
     throw new Error('Test error, everything ok');
