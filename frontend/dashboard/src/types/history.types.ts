@@ -14,12 +14,12 @@ export interface Sample {
 export interface PeriodEfficiency {
   from: string;
   to: string;
-  efficency: number;
+  efficiency: number;
 }
 
 export interface HistoryData {
   samples: Sample[];
-  period_efficency: PeriodEfficiency[];
+  period_efficiency: PeriodEfficiency[];
 }
 
 export interface HistoryObserver {

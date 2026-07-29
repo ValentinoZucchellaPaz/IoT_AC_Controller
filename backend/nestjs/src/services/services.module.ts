@@ -11,7 +11,7 @@ import {
   RESPONSE_DATA_STRATEGIES,
   ResponseProcessingService,
 } from './response-processing.service';
-import { EfficiencyAnalizerStrategy } from 'src/processing/strategies/efficiency-analyzer.strategy';
+import { EfficiencyAnalyzerStrategy } from 'src/processing/strategies/efficiency-analyzer.strategy';
 import { RetrieveDataService } from './retrieve-data.service';
 
 @Module({
@@ -23,7 +23,7 @@ import { RetrieveDataService } from './retrieve-data.service';
     RetrieveDataService, // register as injectable
     DesiredTempModeStrategy,
     CurrentTempStatsStrategy,
-    EfficiencyAnalizerStrategy,
+    EfficiencyAnalyzerStrategy,
     MqttPublisherService,
 
     {
@@ -37,11 +37,11 @@ import { RetrieveDataService } from './retrieve-data.service';
     },
     {
       provide: RESPONSE_DATA_STRATEGIES,
-      useFactory: (efficiencyAnalizerStrategy: EfficiencyAnalizerStrategy) => [
-        efficiencyAnalizerStrategy,
+      useFactory: (efficiencyAnalyzerStrategy: EfficiencyAnalyzerStrategy) => [
+        efficiencyAnalyzerStrategy,
       ],
 
-      inject: [EfficiencyAnalizerStrategy],
+      inject: [EfficiencyAnalyzerStrategy],
     },
   ],
 

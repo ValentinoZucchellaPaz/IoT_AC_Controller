@@ -40,7 +40,7 @@ export function SensorComparisonChart() {
     };
   }, []);
 
-  const labels = historyData?.period_efficency.map((item) => {
+  const labels = historyData?.period_efficiency.map((item) => {
     const fromDate = new Date(item.from);
     const toDate = new Date(item.to);
     const formatTime = (d: Date) =>
@@ -48,8 +48,8 @@ export function SensorComparisonChart() {
     return `${formatTime(fromDate)} a ${formatTime(toDate)}`;
   });
 
-  const dataValues = historyData?.period_efficency.map(
-    (item) => item.efficency,
+  const dataValues = historyData?.period_efficiency.map(
+    (item) => item.efficiency,
   );
 
   const chartData = {
@@ -107,14 +107,14 @@ export function SensorComparisonChart() {
       </div>
 
       <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-4 shadow-lg w-full h-[250px] relative flex flex-col justify-center">
-        {!historyData?.period_efficency ? (
+        {!historyData?.period_efficiency ? (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
             <i className="ph ph-spinner-gap animate-spin text-4xl mb-2 text-white"></i>
             <p className="text-sm font-medium tracking-wide">
               Esperando datos...
             </p>
           </div>
-        ) : historyData?.period_efficency.length > 0 ? (
+        ) : historyData?.period_efficiency.length > 0 ? (
           <div className="relative w-full h-full animate-fade-in">
             <Bar data={chartData} options={chartOptions} />
           </div>

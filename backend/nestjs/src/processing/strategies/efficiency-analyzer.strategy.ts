@@ -5,20 +5,15 @@ import { HistoryReadingsDto } from 'src/models/dto/history-readings.dto';
 import { EfficiencyEnum } from 'src/common/enum/efficiency.enum';
 
 @Injectable()
-export class EfficiencyAnalizerStrategy implements ProcessDataStrategy<
+export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
   ProcessedSensorData[],
   HistoryReadingsDto
 > {
-  readonly name = 'efficiency-analizer';
+  readonly name = 'efficiency-analyzer';
 
-  /** Searches for continuous ac_state=true samples, then determines the period efficiency considering the time needed to reach the desired temp:
-   * - 0: HIGH_EFFICIENCY -> less than 10min
-   * - 1: MEDIUM_EFFICIENCY -> less than 30min
-   * - 2: LOW_EFFICIENCY -> more than 30min
-   */
   process(input: ProcessedSensorData[], output: HistoryReadingsDto): void {
     output.samples = input;
-    const periods: HistoryReadingsDto['period_efficency'] = [];
+    const periods: HistoryReadingsDto['period_efficiency'] = [];
     let startIndex: number | null = null;
 
     for (let i = 0; i <= input.length; i++) {
@@ -55,29 +50,29 @@ export class EfficiencyAnalizerStrategy implements ProcessDataStrategy<
       let efficiency: EfficiencyEnum;
 
       if (reachTimestamp === null) {
-        efficiency = EfficiencyEnum.LOW_EFFICENCY;
+        efficiency = EfficiencyEnum.LOW_EFFICIENCY;
       } else {
         const minutes =
           (reachTimestamp.getTime() - first.ts_end.getTime()) / (1000 * 60);
 
         if (minutes <= 10) {
-          efficiency = EfficiencyEnum.HIGH_EFFICENCY;
+          efficiency = EfficiencyEnum.HIGH_EFFICIENCY;
         } else if (minutes <= 30) {
-          efficiency = EfficiencyEnum.MEDIUM_EFFICENCY;
+          efficiency = EfficiencyEnum.MEDIUM_EFFICIENCY;
         } else {
-          efficiency = EfficiencyEnum.LOW_EFFICENCY;
+          efficiency = EfficiencyEnum.LOW_EFFICIENCY;
         }
       }
 
       periods.push({
         from: first.ts_end,
         to: last.ts_end,
-        efficency: efficiency,
+        efficiency,
       });
 
       startIndex = null;
     }
 
-    output.period_efficency = periods;
+    output.period_efficiency = periods;
   }
 }
