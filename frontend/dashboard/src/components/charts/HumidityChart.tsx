@@ -46,18 +46,7 @@ export function HumidityChart() {
   }, []);
 
   const labels = historyData?.samples.map((item) => {
-    // TRUCO SENIOR: Casteo seguro para evitar a ESLint y a TypeScript al mismo tiempo
-    const safeItem = item as unknown as {
-      ts_end?: string;
-      created_at?: string;
-      data?: { ts_end?: string; created_at?: string };
-    };
-
-    const timestamp =
-      safeItem.ts_end ||
-      safeItem.created_at ||
-      safeItem.data?.ts_end ||
-      safeItem.data?.created_at;
+    const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
 
     return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;

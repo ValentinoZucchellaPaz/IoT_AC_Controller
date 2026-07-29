@@ -9,8 +9,6 @@
  * - `getAlerts()` — fetch alert payloads for widgets
  */
 
-export {};
-
 import { SensorResponseDTO, HistoryResponseDTO } from "../types/sensor.types";
 
 export const SensorsService = {

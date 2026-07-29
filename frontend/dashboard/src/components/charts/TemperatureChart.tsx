@@ -45,36 +45,18 @@ export function TemperatureChart() {
     };
   }, []);
 
-  // build chart data
   const labels = historyData?.samples.map((item) => {
-    // TRUCO SENIOR: Le decimos a TypeScript que trate al 'item' como un objeto que puede tener estas fechas
-    const safeItem = item as {
-      ts_end?: string;
-      created_at?: string;
-      avg_temperature?: number;
-    };
-
-    // Buscamos el timestamp real que mande tu API
-    const timestamp = safeItem.ts_end || safeItem.created_at;
+    const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
 
     return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
   });
 
-  const avgData = historyData?.samples.map((item) => {
-    const safeItem = item as { avg_temperature?: number };
-    return safeItem.avg_temperature ?? 24; // Cae en 24 como respaldo seguro
-  });
+  const avgData = historyData?.samples.map((item) => item.avg_temperature ?? 24);
 
-  const maxData = historyData?.samples.map((item) => {
-    const safeItem = item as { max_temperature?: number };
-    return safeItem.max_temperature ?? 24;
-  });
+  const maxData = historyData?.samples.map((item) => item.max_temperature ?? 24);
 
-  const minData = historyData?.samples.map((item) => {
-    const safeItem = item as { min_temperature?: number };
-    return safeItem.min_temperature ?? 24;
-  });
+  const minData = historyData?.samples.map((item) => item.min_temperature ?? 24);
 
   const chartData = {
     labels,

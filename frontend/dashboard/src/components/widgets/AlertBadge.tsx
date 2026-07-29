@@ -1,25 +1,8 @@
 "use client";
 
-import React from "react";
 import { useSensorPolling } from "@/hooks/useSensorPolling";
 import { Power, Snowflake, Flame, CheckCircle } from "lucide-react";
-
-interface SafePayload {
-  data?: {
-    sensor?: {
-      ac_state?: boolean;
-      avg_temperature?: number;
-      desired_temperature?: number;
-      target_temperature?: number;
-      ts_end?: string;
-    };
-    connectivity: {
-      status?: boolean;
-      ts_end?: string;
-    };
-  };
-  timestamp?: string;
-}
+import type { SensorResponseDTO } from "@/types/sensor.types";
 
 export function AlertBadge() {
   const { data, loading, error } = useSensorPolling(60000);
@@ -33,8 +16,9 @@ export function AlertBadge() {
   let title = "Sincronizando";
   let message = "Conectando con el equipo...";
 
-  const safeData = data as unknown as SafePayload;
-  const apiTimestamp = safeData?.data?.connectivity?.ts_end;
+  const sensor = data?.data?.sensor;
+  const connectivity = data?.data?.connectivity;
+  const apiTimestamp = connectivity?.ts_end;
 
   if (error) {
     bgColor = "bg-red-500/10";
@@ -44,10 +28,10 @@ export function AlertBadge() {
 
     title = "Alerta Crítica";
     message = "Se perdió la conexión con el ESP32";
-  } else if (safeData) {
-    const isPowerOn = safeData?.data?.sensor?.ac_state;
-    const currentTemp = safeData?.data?.sensor?.avg_temperature;
-    const targetTemp = safeData?.data?.sensor?.desired_temperature ?? 24;
+  } else if (sensor) {
+    const isPowerOn = sensor?.ac_state;
+    const currentTemp = sensor?.avg_temperature;
+    const targetTemp = sensor?.desired_temperature ?? 24;
 
     if (!isPowerOn) {
       AlertIcon = Power;

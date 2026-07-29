@@ -5,26 +5,7 @@ import { Minus, Plus, Check, Loader2 } from "lucide-react";
 import styles from "./LatestReadingCard.module.css";
 import { useSensorPolling } from "@/hooks/useSensorPolling";
 import { SensorsService } from "@/services/sensors.service";
-
-interface SafePayload {
-  data?: {
-    sensor?: {
-      device_id?: string;
-      ac_state?: boolean;
-      avg_temperature?: number;
-      min_temperature?: number;
-      max_temperature?: number;
-      desired_temperature?: number;
-      current_humidity?: number;
-      ts_end?: string;
-    };
-    connectivity: {
-      status?: boolean;
-      ts_end?: string;
-    };
-  };
-  timestamp?: string;
-}
+import type { SensorResponseDTO } from "@/types/sensor.types";
 
 const MIN_TEMP = 15;
 const MAX_TEMP = 32;
@@ -32,11 +13,12 @@ const MAX_TEMP = 32;
 export default function LatestReadingCard() {
   const { data: responseData, loading, error } = useSensorPolling(60000);
 
-  const safeResponse = responseData as unknown as SafePayload;
+  const sensor = responseData?.data?.sensor;
+  const connectivity = responseData?.data?.connectivity;
 
-  const deviceName = safeResponse?.data?.sensor?.device_id ?? "Mi ESP32 AC";
-  const deviceStatus = safeResponse?.data?.connectivity.status ?? true;
-  const polledTargetTemp = safeResponse?.data?.sensor?.desired_temperature ?? 24;
+  const deviceName = sensor?.device_id ?? "Mi ESP32 AC";
+  const deviceStatus = connectivity?.status ?? true;
+  const polledTargetTemp = sensor?.desired_temperature ?? 24;
 
   const polledRef = useRef(polledTargetTemp);
   polledRef.current = polledTargetTemp;
@@ -73,11 +55,11 @@ export default function LatestReadingCard() {
       setSending(false);
     }
   }, [pendingTemp, polledTargetTemp, deviceName]);
-  const acState = safeResponse?.data?.sensor?.ac_state ?? false;
-  const currentTemp = safeResponse?.data?.sensor?.avg_temperature ?? 24;
-  const maxTemp = safeResponse?.data?.sensor?.max_temperature ?? 24;
-  const minTemp = safeResponse?.data?.sensor?.min_temperature ?? 24;
-  const humidity = safeResponse?.data?.sensor?.current_humidity ?? 45;
+  const acState = sensor?.ac_state ?? false;
+  const currentTemp = sensor?.avg_temperature ?? 24;
+  const maxTemp = sensor?.max_temperature ?? 24;
+  const minTemp = sensor?.min_temperature ?? 24;
+  const humidity = sensor?.current_humidity ?? 45;
 
   if (error) {
     return (
@@ -90,8 +72,7 @@ export default function LatestReadingCard() {
     );
   }
 
-  // Corregido: Verificamos con safeResponse en vez del viejo sensorData
-  if (loading || !safeResponse?.data?.sensor) {
+  if (loading || !sensor) {
     return (
       <div className="flex justify-center items-center p-8 bg-white/5 border border-white/10 rounded-3xl animate-pulse h-full min-h-[300px] w-full">
         <span className="text-white/50 text-sm font-medium tracking-widest uppercase">
@@ -159,26 +140,6 @@ export default function LatestReadingCard() {
           </div>
         </div>
 
-        {/* <div className="flex justify-center py-2 flex-1 items-center">
-          <div
-            className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full backdrop-blur-sm border ring-1 ring-white/5 flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${circleTheme}`}
-          >
-            <span className="text-xs uppercase tracking-[0.2em] mb-1 font-semibold opacity-70">
-              Sensor
-            </span>
-            <div className="flex items-start">
-              <span className="text-7xl sm:text-8xl font-light tracking-tighter">
-                {currentTemp}
-              </span>
-              <span className="text-3xl font-light mt-2 sm:mt-3">°C</span>
-            </div>
-
-            <div className="absolute bottom-6 flex items-center gap-2 bg-black/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10 text-white/90">
-              <i className="ph ph-thermometer text-lg"></i>
-              <span className="font-medium text-sm">{statusText}</span>
-            </div>
-          </div>
-        </div> */}
         <div className="flex justify-center py-2 flex-1 items-center">
           <div
             className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full
