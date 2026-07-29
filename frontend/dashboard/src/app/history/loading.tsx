@@ -1,10 +1,17 @@
-/**
- * Next.js shows this segment UI automatically while the `/dashboard` route is loading.
- *
- * Students should replace this with a skeleton or spinner that mirrors the dashboard layout
- * (cards on top, charts in the middle, comparison and alerts at the bottom).
- */
+import PageWrapper from "@/components/layout/PageWrapper";
 
 export default function HistoryLoading() {
-  return null;
+  return (
+    <PageWrapper>
+      <section className="animate-pulse">
+        <div className="mb-8 h-4 w-48 rounded bg-white/10" />
+        <div className="mb-8 h-6 w-32 rounded bg-white/10" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="h-[300px] rounded-3xl bg-white/5" />
+          <div className="h-[300px] rounded-3xl bg-white/5" />
+          <div className="h-[300px] rounded-3xl bg-white/5 lg:col-span-2" />
+        </div>
+      </section>
+    </PageWrapper>
+  );
 }

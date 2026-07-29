@@ -32,3 +32,7 @@
     radial-gradient(circle at top, rgba(170, 90, 50, 0.15), transparent 40%),
     linear-gradient(180deg, #1f2937 0%, #6b3f2a 100%);
 }
+
+.fondoDefault {
+  background: transparent;
+}

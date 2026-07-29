@@ -82,13 +82,15 @@ export default function LatestReadingCard() {
     );
   }
 
-  let fondoClass = "";
-  if (currentTemp <= 20) {
-    fondoClass = styles.fondoFrio;
-  } else if (currentTemp >= 21 && currentTemp <= 27) {
-    fondoClass = styles.fondoCalido1;
-  } else if (currentTemp >= 28) {
-    fondoClass = styles.fondoCalido2;
+  let fondoClass = styles.fondoDefault;
+  if (acState) {
+    if (currentTemp <= 20) {
+      fondoClass = styles.fondoFrio;
+    } else if (currentTemp <= 27) {
+      fondoClass = styles.fondoCalido1;
+    } else {
+      fondoClass = styles.fondoCalido2;
+    }
   }
 
   let circleTheme = "";
