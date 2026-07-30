@@ -5,27 +5,27 @@
 #include <PubSubClient.h>
 #include <ctime>
 
-auto constexpr WIFI_CONNECTION_TIMEOUT_MS = 15000UL;
+auto constexpr WIFI_CONNECTION_TIMEOUT_MS = 30000UL;
+static constexpr int MIN_TEMPERATURE = 15;
+static constexpr int MAX_TEMPERATURE = 32;
 
-
-namespace network {
+namespace network
+{
 
     WiFiClient wifiClient;
-    PubSubClient mqttClient(wifiClient);    
+    PubSubClient mqttClient(wifiClient);
 
     NetworkClient* NetworkClient::instance_ = nullptr;
 
     NetworkClient::NetworkClient(const app::AppConfig& config, sensors::SensorService& sensorService)
-        : config_(config), sensorService_(sensorService)
+        : config_(config)
+        , sensorService_(sensorService)
     {
         instance_ = this;
     }
     static bool ledEnabled = false;
 
-    void mqttCallback(
-        char* topic,
-        byte* payload,
-        unsigned int length)
+    void mqttCallback(char* topic, byte* payload, unsigned int length)
     {
         String msg;
 
@@ -53,52 +53,41 @@ namespace network {
     {
         connectToWifi();
 
-        mqttClient.setServer(
-        config_.mqttBroker,
-        config_.mqttPort);
+        mqttClient.setServer(config_.mqttBroker, config_.mqttPort);
 
         mqttClient.setCallback(mqttCallback);
 
         mqttClient.setBufferSize(1024);
-
     }
 
     void NetworkClient::ensureMqttConnection()
     {
+        if (!isConnected())
+        {
+            logMessage("Cannot connect MQTT: Wi-Fi is offline.");
+            return;
+        }
+
         while (!mqttClient.connected())
         {
             Serial.println("[ESP32] Connecting MQTT...");
 
-            String willPayload =
-            String("{\"device_id\":\"") +
-            config_.deviceId +
-            "\",\"status\":false}";
-            
-            if (mqttClient.connect(
-                config_.deviceId,
-                statusTopic.c_str(),
-                1,
-                true,
-                willPayload.c_str()))
+            String willPayload = String("{\"device_id\":\"") + config_.deviceId + "\",\"status\":false}";
+
+            if (mqttClient.connect(config_.deviceId, statusTopic.c_str(), 1, true, willPayload.c_str()))
             {
                 Serial.println("[ESP32] MQTT connected");
-                        String ledTopic =
-                    String("devices/")
-                    + config_.deviceId
-                    + "/led";
+                String ledTopic = String("devices/") + config_.deviceId + "/led";
 
                 mqttClient.subscribe(ledTopic.c_str());
 
-                String cmdTopic =
-                    String("devices/")
-                    + config_.deviceId
-                    + "/command";
+                String cmdTopic = String("devices/") + config_.deviceId + "/command";
 
                 mqttClient.subscribe(cmdTopic.c_str());
 
                 JsonDocument payload;
 
-                payload["device_id"] = "ESP32_01";
+                payload["device_id"] = config_.deviceId;
                 payload["status"] = true;
 
                 String body;
@@ -127,11 +116,8 @@ namespace network {
         return WiFi.status() == WL_CONNECTED;
     }
 
-    bool NetworkClient::postSensorReading(
-        const sensors::SensorReading& reading)
+    bool NetworkClient::postSensorReading(const sensors::SensorReading& reading)
     {
-        
-        
 
         JsonDocument payload;
 
@@ -143,21 +129,20 @@ namespace network {
         payload["ac_state"] = static_cast<bool>(reading.ac_state);
         payload["current_humidity"] = reading.current_humidity;
 
-        JsonArray currentTemps =
-            payload["current_temperature"].to<JsonArray>();
+        JsonArray currentTemps = payload["current_temperature"].to<JsonArray>();
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 20; i++)
+        {
             currentTemps.add(reading.current_temperature[i]);
         }
 
-        JsonArray desiredTemps =
-            payload["desired_temperature"].to<JsonArray>();
+        JsonArray desiredTemps = payload["desired_temperature"].to<JsonArray>();
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 20; i++)
+        {
             desiredTemps.add(reading.desired_temperature[i]);
         }
 
-        
         String body;
         serializeJson(payload, body);
 
@@ -169,7 +154,6 @@ namespace network {
         return ok;
     }
 
-
     void NetworkClient::connectToWifi()
     {
         if (WiFi.status() == WL_CONNECTED)
@@ -178,6 +162,11 @@ namespace network {
         }
 
         logMessage("Connecting to Wi-Fi...");
+        Serial.print("[ESP32] SSID: \"");
+        Serial.print(config_.wifiSsid);
+        Serial.println("\"");
+
+        WiFi.disconnect(true);
         WiFi.mode(WIFI_STA);
         WiFi.begin(config_.wifiSsid, config_.wifiPassword);
 
@@ -195,7 +184,8 @@ namespace network {
             return;
         }
 
-        logMessage("Wi-Fi connection failed. Will retry on next loop.");
+        logMessage("Wi-Fi connection failed. Wi-Fi status: " + String(WiFi.status()));
+        WiFi.printDiag(Serial);
     }
 
     void NetworkClient::logMessage(const String& message)
@@ -205,13 +195,15 @@ namespace network {
 
     void NetworkClient::handleCommand(const JsonDocument& doc)
     {
-        if (doc["desired_temperature"].is<int>())
+        if (doc["desired_temperature"].is<float>())
         {
             int temp = doc["desired_temperature"].as<int>();
 
-            if (temp < 15) temp = 15;
+            if (temp < MIN_TEMPERATURE)
+                temp = MIN_TEMPERATURE;
 
-            if (temp > 32) temp = 32;
+            if (temp > MAX_TEMPERATURE)
+                temp = MAX_TEMPERATURE;
 
             sensorService_.applyRemoteDesiredTemperature(temp);
             logMessage("Remote temp command: " + String(temp) + "C");
@@ -222,4 +214,4 @@ namespace network {
     {
         mqttClient.loop();
     }
-}  // namespace network
+} // namespace network

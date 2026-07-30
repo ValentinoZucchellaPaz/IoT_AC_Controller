@@ -25,7 +25,9 @@ struct AppConfig {
   uint16_t mqttPort;
   uint8_t ledPin;
   uint8_t buttonPin;
-  uint8_t desiredTemperaturePin;
+  uint8_t buttonUpPin;
+  uint8_t buttonDownPin;
+  uint8_t greenLedPin;
   uint8_t dhtSensorPin;
   
   unsigned long telemetryIntervalMs;
@@ -48,7 +50,9 @@ inline constexpr AppConfig CONFIG{
     1883,
     2,
     4,
-    36, // Potentiometer for desired temperature
+    13, // Button UP (increase desired temperature)
+     14, // Button DOWN (decrease desired temperature)
+    16, // Green LED (relay / cooling active)
     27, // DHT11 sensor
     10000UL,
     3000UL,
