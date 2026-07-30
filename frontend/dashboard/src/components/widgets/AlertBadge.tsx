@@ -2,7 +2,6 @@
 
 import { useSensorPolling } from "@/hooks/useSensorPolling";
 import { Power, Snowflake, Flame, CheckCircle } from "lucide-react";
-import type { SensorResponseDTO } from "@/types/sensor.types";
 
 export function AlertBadge() {
   const { data, loading, error } = useSensorPolling(60000);
@@ -132,10 +131,10 @@ export function AlertBadge() {
         {apiTimestamp && !error && (
           <p className="mt-3 text-xs text-zinc-400">
             Último ping:{" "}
-            {new Date(apiTimestamp)
-              .toISOString()
-              .replace("T", " ")
-              .slice(0, 19)}
+            {(() => {
+              const d = new Date(apiTimestamp);
+              return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(2, 4)} - ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+            })()}
           </p>
         )}
       </div>
