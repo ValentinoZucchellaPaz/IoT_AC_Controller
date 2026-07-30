@@ -1,7 +1,7 @@
 "use client";
 
 import { useSensorPolling } from "@/hooks/useSensorPolling";
-import { Power, Snowflake, Flame, CheckCircle } from "lucide-react";
+import { Power, Snowflake, CheckCircle } from "lucide-react";
 
 export function AlertBadge() {
   const { data, loading, error } = useSensorPolling(60000);
@@ -18,6 +18,7 @@ export function AlertBadge() {
   const sensor = data?.data?.sensor;
   const connectivity = data?.data?.connectivity;
   const apiTimestamp = connectivity?.ts_end;
+  const isPowerOn = sensor?.ac_state ?? false;
 
   if (error) {
     bgColor = "bg-red-500/10";
@@ -28,7 +29,6 @@ export function AlertBadge() {
     title = "Alerta Crítica";
     message = "Se perdió la conexión con el ESP32";
   } else if (sensor) {
-    const isPowerOn = sensor?.ac_state;
     const currentTemp = sensor?.avg_temperature;
     const targetTemp = sensor?.desired_temperature ?? 24;
 
@@ -39,7 +39,7 @@ export function AlertBadge() {
       textColor = "text-zinc-300";
       dotColor = "bg-zinc-400";
 
-      title = "Sistema Apagado";
+      title = "Apagado";
       message = "El equipo se encuentra sin actividad.";
     } else if (currentTemp && currentTemp >= targetTemp + 1) {
       AlertIcon = Snowflake;
@@ -48,17 +48,8 @@ export function AlertBadge() {
       textColor = "text-sky-300";
       dotColor = "bg-sky-400";
 
-      title = "Sistema Activo";
+      title = "Enfriando";
       message = `Enfriando la habitación hasta los ${targetTemp}°C.`;
-    } else if (currentTemp && currentTemp <= targetTemp - 1) {
-      AlertIcon = Flame;
-      bgColor = "bg-red-500/10";
-      borderColor = "border-red-400/20";
-      textColor = "text-red-300";
-      dotColor = "bg-red-400";
-
-      title = "Sistema Activo";
-      message = `Calentando la habitación hasta los ${targetTemp}°C.`;
     } else {
       AlertIcon = CheckCircle;
       bgColor = "bg-emerald-500/10";
@@ -122,6 +113,7 @@ export function AlertBadge() {
               ${textColor}
             `}
           >
+            {sensor && isPowerOn && "Encendido - "}
             {title}
           </h4>
         </div>

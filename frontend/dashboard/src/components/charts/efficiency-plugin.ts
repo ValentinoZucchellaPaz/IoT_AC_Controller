@@ -24,14 +24,11 @@ export function createEfficiencyPlugin(
       const xAxis = chart.scales.x;
       const yAxis = chart.scales.y;
 
-      const barWidth =
-        xAxis.getPixelForValue(1) - xAxis.getPixelForValue(0);
-
       ctx.save();
 
       for (const range of ranges) {
-        const x1 = xAxis.getPixelForValue(range.start) - barWidth / 2;
-        const x2 = xAxis.getPixelForValue(range.end) + barWidth / 2;
+        const x1 = xAxis.getPixelForValue(range.start);
+        const x2 = xAxis.getPixelForValue(range.end);
         const color = EFFICIENCY_COLORS[range.value];
 
         const barHeight = 5;

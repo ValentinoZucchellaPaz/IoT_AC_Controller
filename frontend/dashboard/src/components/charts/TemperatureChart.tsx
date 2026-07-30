@@ -18,7 +18,10 @@ import { Line } from "react-chartjs-2";
 import { HistoryData, HistoryObserver } from "@/types/history.types";
 import { historyStore } from "@/observer/history-store-instance";
 import { createGapPlugin, detectGaps } from "./gap-plugin";
-import { createEfficiencyPlugin, computeEfficiencyRanges } from "./efficiency-plugin";
+import {
+  createEfficiencyPlugin,
+  computeEfficiencyRanges,
+} from "./efficiency-plugin";
 
 ChartJS.register(
   CategoryScale,
@@ -58,7 +61,7 @@ export function TemperatureChart() {
 
   const chartKey = historyData?.samples
     ? `${historyData.samples.length}-${historyData.samples[0]?.ts_end}-${historyData.samples.at(-1)?.ts_end}`
-    : 'empty';
+    : "empty";
 
   const effRanges = useMemo(
     () =>
@@ -208,7 +211,7 @@ export function TemperatureChart() {
             <button
               onClick={() => {
                 if (window.innerWidth >= 768) return;
-                setShowEffInfo(prev => !prev);
+                setShowEffInfo((prev) => !prev);
               }}
               onMouseEnter={() => {
                 if (window.innerWidth >= 768) setShowEffInfo(true);
@@ -221,10 +224,13 @@ export function TemperatureChart() {
             >
               ?
             </button>
-            <div className={`absolute bottom-full right-0 mb-2 w-56 p-2 rounded-lg bg-slate-800/95 border border-white/10 text-[10px] text-white/70 leading-relaxed z-10 transition-all duration-200
-              ${showEffInfo ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}
+            <div
+              className={`absolute bottom-full right-0 mb-2 w-56 p-2 rounded-lg bg-slate-800/95 border border-white/10 text-[10px] text-white/70 leading-relaxed z-10 transition-all duration-200
+              ${showEffInfo ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"}`}
             >
-              Eficiencia del AC: mientras el equipo estuvo encendido, se mide cuánto tardó en alcanzar la temperatura deseada. Verde = &lt;10 min, Naranja = &lt;30 min, Rojo = &gt;30 min.
+              Eficiencia del AC: estando ENCENDIDO, cuánto tardó en alcanzar la
+              temperatura deseada. Verde = &lt;10 min, Naranja = &lt;30 min,
+              Rojo = &gt;30 min.
             </div>
           </div>
         </div>
@@ -240,7 +246,12 @@ export function TemperatureChart() {
           </div>
         ) : historyData?.samples?.length > 0 ? (
           <div className="relative w-full h-full">
-            <Line key={chartKey} data={chartData} options={chartOptions} plugins={[effPlugin, gapPlugin]} />
+            <Line
+              key={chartKey}
+              data={chartData}
+              options={chartOptions}
+              plugins={[effPlugin, gapPlugin]}
+            />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
