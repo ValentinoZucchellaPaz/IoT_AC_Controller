@@ -27,12 +27,11 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
       const sample = isLast ? null : input[i];
 
       const shouldEndPeriod =
-        periodStart !== null &&
-        (isLast ||
-          !sample!.ac_state ||
-          sample!.desired_temperature !== input[i - 1].desired_temperature);
+        isLast ||
+        !sample!.ac_state ||
+        sample!.desired_temperature !== input[i - 1].desired_temperature;
 
-      if (shouldEndPeriod) {
+      if (shouldEndPeriod && periodStart !== null) {
         const periodSamples = input.slice(periodStart, i);
         const firstSample = periodSamples[0];
         const lastSample = periodSamples.at(-1)!;
