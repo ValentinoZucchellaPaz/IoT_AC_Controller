@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend Dashboard — Sistema de Climatización IoT
 
-## Getting Started
+Dashboard web construido con **Next.js 16** (App Router), **shadcn/ui**, **Recharts** y **Chart.js**.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router)
+- shadcn/ui (componentes)
+- Recharts + Chart.js (gráficos)
+- Tailwind CSS (estilos)
+- Vitest (tests)
+
+## Scripts
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # Servidor de desarrollo (:3001)
+npm test         # Tests (Vitest)
+npm run build    # Build de producción
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estructura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/                  # Páginas (App Router)
+├── components/           # Componentes React
+│   ├── charts/           # Gráficos (TemperatureChart, HumidityChart)
+│   ├── widgets/          # AlertBadge, efficiency, etc.
+│   └── ui/               # shadcn/ui components
+├── observer/             # Observer pattern (stores)
+├── services/             # Llamadas a la API
+└── types/                # Tipos TypeScript
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Características
 
-## Learn More
+- Gráfico de temperatura en tiempo real con línea de temperatura deseada
+- Gráfico de humedad
+- Barras de eficiencia por período
+- Indicador de estado del dispositivo (conectado/desconectado)
+- Botón de ayuda (?) en la leyenda de eficiencia con tooltip
 
-To learn more about Next.js, take a look at the following resources:
+## Variables de entorno
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+El frontend redirige `/api/*` → backend via `next.config.js`.
 
-## Deploy on Vercel
+## Documentación relacionada
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [docs/payload.md](../../docs/payload.md) — API REST
+- [docs/setup.md](../../docs/setup.md) — Guía de instalación

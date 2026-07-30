@@ -9,11 +9,25 @@
  * - `getAlerts()` — fetch alert payloads for widgets
  */
 
-export {};
-
 import { SensorResponseDTO, HistoryResponseDTO } from "../types/sensor.types";
 
 export const SensorsService = {
+  async setDesiredTemperature(
+    deviceId: string,
+    temperature: number,
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch("/api/devices/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        device_id: deviceId,
+        desired_temperature: temperature,
+      }),
+    });
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    return response.json();
+  },
+
   async getLatestReading(): Promise<SensorResponseDTO> {
     try {
       // ruting relativo en next.config.ts

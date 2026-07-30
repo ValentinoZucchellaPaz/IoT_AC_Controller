@@ -1,36 +1,55 @@
-# 🚀 ESP32 Firmware Project 
+# Firmware ESP32 — Sistema de Climatización IoT
 
-This section contains the base structure for the development of the Final Project firmware for the **Ingeniería de Software y Hardware** course of the Computer Engineering program at FCEFyN - UNC. The project is designed under an **aligned autonomy** approach, where teams have technical freedom within the engineering best practices established by the faculty.
+## Stack
 
+- **PlatformIO** con framework Arduino
+- **DHT11** para temperatura y humedad
+- **PubSubClient** para comunicación MQTT
+- **ArduinoJson** para serialización
 
-## 📂 Project Structure
+## Estructura
 
-* **`include/`**: Contains header files (`.h`).
-* **`src/`**: Directory for source code (`.cpp`). A modular division (sensors, communication, business logic) is recommended, aligned with the design and implementation process.
-* **`test/`**: Unit Tests should be implemented here.
-* **`.env.example`**: Template for managing sensitive configurations (SSID, passwords, backend IPs). **Note:** The actual `.env` file must never be uploaded to version control.
-* **`platformio.ini`**: Configuration manifest that defines hardware, dependency management, and quality analysis tools.
+```
+include/          Archivos de cabecera (.h)
+src/              Código fuente (.cpp)
+  ├── sensors/     Lectura de sensores + botones
+  ├── network/     WiFi + MQTT
+  └── power/       Gestión de energía
+test/             Tests unitarios (GoogleTest)
+platformio.ini    Configuración del proyecto
+```
 
+## Comandos
 
-## ⌨️ Useful Commands (PlatformIO CLI)
+```bash
+# Compilar
+pio run
 
-For managing the software life cycle, use the following commands from the terminal:
+# Flashear ESP32
+pio run -t upload
 
-### Build and Upload Management
-* **Compile the project:**
-    `pio run`
-* **Upload firmware to the ESP32:**
-    `pio run -t upload`
-* **Serial Monitor:**
-    `pio device monitor`
+# Monitor serie
+pio device monitor
 
-### Quality and Testing
-* **Run Unit Tests:**
-    `pio test`
-* **Static Code Analysis:**
-    `pio check`
-* **Clean temporary build files:**
-    `pio run -t clean`
+# Tests unitarios (host, no requiere ESP32)
+pio test -e native_test
 
----
-**Course:** Ingeniería de Software y Hardware - FCEFyN - UNC
+# Análisis estático
+pio check
+```
+
+## Configuración
+
+Copiar `include/config_local.example.hpp` → `include/config_local.hpp` y editar:
+
+```cpp
+#define WIFI_SSID "tu-red"
+#define WIFI_PASSWORD "tu-password"
+#define MQTT_BROKER "192.168.x.x"
+```
+
+## Documentación relacionada
+
+- [docs/hardware_documentation.md](../../docs/hardware_documentation.md) — pines, cableado y lógica de control
+- [docs/topics.md](../../docs/topics.md) — topics MQTT
+- [docs/domain_logic.md](../../docs/domain_logic.md) — reglas de negocio (histéresis, frecuencias)

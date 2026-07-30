@@ -5,79 +5,76 @@ import { HistoryReadingsDto } from 'src/models/dto/history-readings.dto';
 import { EfficiencyEnum } from 'src/common/enum/efficiency.enum';
 
 @Injectable()
-export class EfficiencyAnalizerStrategy implements ProcessDataStrategy<
+export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
   ProcessedSensorData[],
   HistoryReadingsDto
 > {
-  readonly name = 'efficiency-analizer';
+  readonly name = 'efficiency-analyzer';
 
-  /** Searches for continuous ac_state=true samples, then determines the period efficiency considering the time needed to reach the desired temp:
-   * - 0: HIGH_EFFICIENCY -> less than 10min
-   * - 1: MEDIUM_EFFICIENCY -> less than 30min
-   * - 2: LOW_EFFICIENCY -> more than 30min
-   */
   process(input: ProcessedSensorData[], output: HistoryReadingsDto): void {
     output.samples = input;
-    const periods: HistoryReadingsDto['period_efficency'] = [];
-    let startIndex: number | null = null;
+    const periods: HistoryReadingsDto['period_efficiency'] = [];
 
-    for (let i = 0; i <= input.length; i++) {
-      const sample = input[i];
-
-      const isRunning = sample?.ac_state === true;
-
-      if (startIndex === null && isRunning) {
-        startIndex = i;
-        continue;
-      }
-
-      const finishedPeriod =
-        startIndex !== null && (!isRunning || i === input.length);
-
-      if (!finishedPeriod) {
-        continue;
-      }
-
-      const periodSamples = input.slice(startIndex!, i);
-
-      const first = periodSamples[0];
-      const last = periodSamples.at(-1)!;
-
-      let reachTimestamp: Date | null = null;
-
-      for (const current of periodSamples) {
-        if (current.avg_temperature <= current.desired_temperature) {
-          reachTimestamp = current.ts_end;
-          break;
-        }
-      }
-
-      let efficiency: EfficiencyEnum;
-
-      if (reachTimestamp === null) {
-        efficiency = EfficiencyEnum.LOW_EFFICENCY;
-      } else {
-        const minutes =
-          (reachTimestamp.getTime() - first.ts_end.getTime()) / (1000 * 60);
-
-        if (minutes <= 10) {
-          efficiency = EfficiencyEnum.HIGH_EFFICENCY;
-        } else if (minutes <= 30) {
-          efficiency = EfficiencyEnum.MEDIUM_EFFICENCY;
-        } else {
-          efficiency = EfficiencyEnum.LOW_EFFICENCY;
-        }
-      }
-
-      periods.push({
-        from: first.ts_end,
-        to: last.ts_end,
-        efficency: efficiency,
-      });
-
-      startIndex = null;
+    if (input.length === 0) {
+      output.period_efficiency = [];
+      return;
     }
 
-    output.period_efficency = periods;
+    let periodStart: number | null = null;
+
+    for (let i = 0; i <= input.length; i++) {
+      const isLast = i === input.length;
+      const sample = isLast ? null : input[i];
+
+      const shouldEndPeriod =
+        isLast ||
+        (sample && !sample.ac_state) ||
+        (sample &&
+          i > 0 &&
+          sample.desired_temperature !== input[i - 1].desired_temperature);
+
+      if (shouldEndPeriod && periodStart !== null) {
+        const periodSamples = input.slice(periodStart, i);
+        const firstSample = periodSamples[0];
+        const lastSample = periodSamples.at(-1)!;
+
+        let efficiency = EfficiencyEnum.LOW_EFFICIENCY;
+
+        let reachTimestamp: Date | null = null;
+
+        for (const s of periodSamples) {
+          if (s.avg_temperature <= s.desired_temperature) {
+            reachTimestamp = s.ts_end;
+            break;
+          }
+        }
+
+        if (reachTimestamp !== null) {
+          const minutes =
+            (reachTimestamp.getTime() - firstSample.ts_end.getTime()) /
+            (1000 * 60);
+
+          if (minutes <= 10) {
+            efficiency = EfficiencyEnum.HIGH_EFFICIENCY;
+          } else if (minutes <= 30) {
+            efficiency = EfficiencyEnum.MEDIUM_EFFICIENCY;
+          }
+        }
+
+        periods.push({
+          from: firstSample.ts_end,
+          to: lastSample.ts_end,
+          efficiency,
+        });
+
+        periodStart = null;
+      }
+
+      if (sample && sample.ac_state && periodStart === null) {
+        periodStart = i;
+      }
+    }
+
+    output.period_efficiency = periods;
   }
 }

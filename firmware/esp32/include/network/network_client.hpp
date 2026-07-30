@@ -6,84 +6,102 @@
 
 #include "app_config.hpp"
 #include "network/network_types.hpp"
+#include "sensors/sensor_service.hpp"
 #include "sensors/sensor_types.hpp"
+#include <ArduinoJson.hpp>
 
-namespace network {
+namespace network
+{
 
-/**
- * @brief Encapsulates Wi-Fi connectivity and backend HTTP communication.
- *
- * This class owns the infrastructure-facing responsibilities of the
- * firmware: connecting to the wireless network, uploading telemetry,
- * and retrieving remote actuator state.
- */
-class NetworkClient {
-public:
     /**
-     * @brief Creates the client with shared firmware configuration.
+     * @brief Encapsulates Wi-Fi connectivity and backend HTTP communication.
      *
-     * @param config Immutable firmware configuration.
+     * This class owns the infrastructure-facing responsibilities of the
+     * firmware: connecting to the wireless network, uploading telemetry,
+     * and retrieving remote actuator state.
      */
-    explicit NetworkClient(const app::AppConfig& config);
+    class NetworkClient
+    {
+    public:
+        /**
+         * @brief Creates the client with shared firmware configuration.
+         *
+         * @param config Immutable firmware configuration.
+         * @param sensorService Reference to the sensor service for applying remote commands.
+         */
+        explicit NetworkClient(const app::AppConfig& config, sensors::SensorService& sensorService);
 
-    /**
-     * @brief Performs initial network setup.
-     */
-    void begin();
+        /**
+         * @brief Performs initial network setup.
+         */
+        void begin();
 
-    /**
-     * @brief Reconnects MQTT then subscribe to devices/ESP32_01/led and publish
-     * in sensor/status
-     */
-    void ensureMqttConnection();
+        /**
+         * @brief Reconnects MQTT then subscribe to devices/ESP32_01/led and publish
+         * in sensor/status
+         */
+        void ensureMqttConnection();
 
-    /**
-     * @brief Reconnects to Wi-Fi when the device is offline.
-     */
-    void ensureWifiConnection();
+        /**
+         * @brief Reconnects to Wi-Fi when the device is offline.
+         */
+        void ensureWifiConnection();
 
-    /**
-     * @brief Notify to the broker to keep connection then receive the payload if
-     * there is one from the subscribed topic and call callback()
-     */
-    void loop();
+        /**
+         * @brief Notify to the broker to keep connection then receive the payload if
+         * there is one from the subscribed topic and call callback()
+         */
+        void loop();
 
-    /**
-     * @brief Indicates whether Wi-Fi is currently available.
-     *
-     * @return true When the ESP32 is connected to the access point.
-     * @return false Otherwise.
-     */
-    bool isConnected() const;
+        /**
+         * @brief Indicates whether Wi-Fi is currently available.
+         *
+         * @return true When the ESP32 is connected to the access point.
+         * @return false Otherwise.
+         */
+        bool isConnected() const;
 
-    /**
-     * @brief Sends a telemetry sample to the backend.
-     *
-     * @param reading Sensor sample to serialize and publish.
-     * @return true When the request completes successfully.
-     * @return false When the request fails or Wi-Fi is unavailable.
-     */
-    bool postSensorReading(const sensors::SensorReading& reading);
+        /**
+         * @brief Sends a telemetry sample to the backend.
+         *
+         * @param reading Sensor sample to serialize and publish.
+         * @return true When the request completes successfully.
+         * @return false When the request fails or Wi-Fi is unavailable.
+         */
+        bool postSensorReading(const sensors::SensorReading& reading);
 
-    String statusTopic = String("sensor/status");
-    String dataTopic = String("sensor/datos");
+        /**
+         * @brief Processes an incoming MQTT command message.
+         *
+         * Handles commands from the backend published to devices/{id}/command,
+         * such as desired_temperature overrides.
+         */
+        void handleCommand(const ArduinoJson::JsonDocument& doc);
 
-private:
-    /**
-     * @brief Opens a Wi-Fi connection using the configured credentials.
-     */
-    void connectToWifi();
+        String statusTopic = String("sensor/status");
+        String dataTopic = String("sensor/datos");
 
-    /**
-     * @brief Emits a firmware log line to the serial console.
-     *
-     * @param message Message body without prefix.
-     */
-    static void logMessage(const String& message);
+    private:
+        /**
+         * @brief Opens a Wi-Fi connection using the configured credentials.
+         */
+        void connectToWifi();
 
-    const app::AppConfig& config_;
-};
+        /**
+         * @brief Emits a firmware log line to the serial console.
+         *
+         * @param message Message body without prefix.
+         */
+        static void logMessage(const String& message);
 
-}  // namespace network
+    public:
+        static NetworkClient* instance_;
 
-#endif  // FIRMWARE_ESP32_INCLUDE_NETWORK_NETWORK_CLIENT_HPP
+    private:
+        const app::AppConfig& config_;
+        sensors::SensorService& sensorService_;
+    };
+
+} // namespace network
+
+#endif // FIRMWARE_ESP32_INCLUDE_NETWORK_NETWORK_CLIENT_HPP

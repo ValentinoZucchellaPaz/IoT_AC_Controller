@@ -38,10 +38,34 @@ public:
     SensorReading read(power::AcState acState) const;
 
     /**
-     * @brief Reads the desired temperature from the potentiometer.
+     * @brief Overrides the desired temperature with a value received
+     * from the backend via MQTT command topic.
      *
-     * The ADC value (0-4095) is mapped to the allowed
-     * temperature range of 15°C to 32°C.
+     * When active, readDesiredTemperature() returns this value
+     * instead of reading the potentiometer. Resets on reboot.
+     */
+    void applyRemoteDesiredTemperature(int temp);
+
+    /**
+     * @brief Reverts to local potentiometer control.
+     */
+    void revertToLocalControl();
+
+    /**
+     * @brief Polls the temperature-adjustment buttons with debounce.
+     *
+     * Should be called frequently from loop(). Reads the UP/DOWN
+     * button states, applies debounce, and adjusts the local desired
+     * temperature accordingly. Also reverts from remote control to
+     * local when a button is pressed.
+     */
+    void updateButtons();
+
+    /**
+     * @brief Returns the current desired temperature.
+     *
+     * Returns the locally stored value (adjusted by buttons) or the
+     * remote override if one has been applied via the MQTT command topic.
      *
      * @return Desired temperature in degrees Celsius.
      */
@@ -131,11 +155,15 @@ public:
 private:
     static constexpr size_t MAX_SAMPLES = 20;
 
+    int localDesiredTemperature_{24};
+    int remoteDesiredTemperature_{0};
+    bool useRemoteTemperature_{false};
+
     int desiredTemperatures_[MAX_SAMPLES];
     float currentTemperatures_[MAX_SAMPLES];
     float humiditySample_;
 
-    size_t validSamples_ ;
+    size_t validSamples_;
 
     const app::AppConfig& config_;
 
@@ -143,8 +171,15 @@ private:
     static constexpr int MIN_TEMPERATURE = 15;
     static constexpr int MAX_TEMPERATURE = 32;
 
-    // ESP32 ADC resolution configured to 12 bits.
-    static constexpr int ADC_MAX_VALUE = 4095;
+    // Button debounce
+    static constexpr unsigned long BUTTON_DEBOUNCE_MS = 200;
+    unsigned long lastButtonTime_{0};
+    static volatile bool buttonUpPressed_;
+    static volatile bool buttonDownPressed_;
+
+    // ISR trampolines
+    static void IRAM_ATTR isrUp();
+    static void IRAM_ATTR isrDown();
 
     // DHT sensor instance for reading temperature.
     DHT dht_;

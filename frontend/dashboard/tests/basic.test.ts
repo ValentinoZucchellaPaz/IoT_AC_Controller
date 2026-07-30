@@ -19,11 +19,11 @@ describe('Patrón Observer - HistoryStore', () => {
         created_at: "2026-06-16T14:00:00Z"
       }
     ],
-    period_efficency: [
+    period_efficiency: [
       {
         from: "2026-06-16T13:00:00Z",
         to: "2026-06-16T14:00:00Z",
-        efficency: 85.5
+        efficiency: 85.5
       }
     ]
   };

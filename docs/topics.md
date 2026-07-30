@@ -1,67 +1,51 @@
-## Topics MQTT
+# Topics MQTT
 
-### ESP32 → Backend
+## ESP32 → Backend
 
-| Topic                | QoS | Retained | Description                         | Payload                                 |
-|----------------------|-----|----------|-------------------------------------|-----------------------------------------|
-| `data/{device_id}`   |  1  | No       | Sensor readings batch sent every 1  | [See example](#example-data-payload)    |
-|                      |     |          | min (AC on) or 5 min (AC off)       |                                         |
-| `status/{device_id}` |  0  | Yes      | Heartbeat to signal the device is   | [See examples](#examples-status-payload)|
-|                      |     |          | online                              |                                         |
+| Topic | QoS | Retained | Payload | Frecuencia |
+|---|---|---|---|---|
+| `sensor/datos` | 1 | No | [batch de sensores](#sensordatos) | Cada 60s (AC encendido) o 300s (AC apagado) |
+| `sensor/status` | 1 | Sí | [estado de conexión](#sensorstatus) | Al iniciar y al reconectar |
 
+### sensor/datos
 
-### Backend → ESP32
-
-| Topic                | QoS | Retained | Description                         | Payload                                 |
-|----------------------|-----|----------|-------------------------------------|-----------------------------------------|
-| `cmd/{device_id}`    |  1  | No       | Commands sent to a specific device  | [See examples](#examples-cmd-payload)   |
-
-
-#### Available commands:
-
-| Command     | Description                                                        |
-|-------------|--------------------------------------------------------------------|
-| `get_data`  | Forces the immediate sending of data, even if 60 samples have not  |
-|             | been reached since the last shipment.                              |
-| `get_status`| Requests an immediate status publish on `status/{device_id}`       |
-
-
-
-### Example data payload:
 ```json
 {
-    "device_id": "ESP32_01",
-    "ac_state": true,
-    "desired_temperature": [22.0, 22.5, 23.0, ... ],
-    "current_temperature": [23.4, 22.8, 22.5, ... ],
-    "valid_samples": 3,
-    "ts_end": 1634567890
+  "device_id": "ESP32_01",
+  "ac_state": true,
+  "desired_temperature": [22.0, 22.5, 23.0],
+  "current_temperature": [23.4, 22.8, 22.5],
+  "valid_samples": 3,
+  "current_humidity": 55.0,
+  "ts_end": 1780617600
 }
 ```
 
-### Examples status payload:
+### sensor/status
+
 ```json
 {
-    "online": true,  
-    "ts": 1634567890 
-}
-
-{
-    "online": false,  
-    "ts": 1634567890 
+  "device_id": "ESP32_01",
+  "status": true
 }
 ```
 
-### Examples cmd payload:
-```json
-{ 
-    "cmd": "get_data" 
-}
+`status: true` = dispositivo conectado (WiFi + MQTT). Se publica al iniciar y al reconectar. `status: false` se envía automáticamente via LWT (Last Will and Testament) cuando el dispositivo se desconecta inesperadamente.
 
-{ 
-    "cmd": "get_status" 
+---
+
+## Backend → ESP32
+
+| Topic | QoS | Retained | Payload |
+|---|---|---|---|
+| `devices/{device_id}/command` | 1 | No | [comando](#devicesdevice_idcommand) |
+
+### devices/{device_id}/command
+
+```json
+{
+  "desired_temperature": 22.5
 }
 ```
 
-
-
+El ESP32 recibe esto vía suscripción MQTT y actualiza su temperatura objetivo. El valor es **float** (se parsea con `is<float>()` en el firmware).

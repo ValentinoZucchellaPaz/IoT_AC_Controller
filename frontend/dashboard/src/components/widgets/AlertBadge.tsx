@@ -1,25 +1,7 @@
 "use client";
 
-import React from "react";
 import { useSensorPolling } from "@/hooks/useSensorPolling";
-import { Power, Snowflake, Flame, CheckCircle } from "lucide-react";
-
-interface SafePayload {
-  data?: {
-    sensor?: {
-      ac_state?: boolean;
-      avg_temperature?: number;
-      desired_temperature?: number;
-      target_temperature?: number;
-      ts_end?: string;
-    };
-    connectivity: {
-      status?: boolean;
-      ts_end?: string;
-    };
-  };
-  timestamp?: string;
-}
+import { Power, Snowflake, CheckCircle } from "lucide-react";
 
 export function AlertBadge() {
   const { data, loading, error } = useSensorPolling(60000);
@@ -33,8 +15,10 @@ export function AlertBadge() {
   let title = "Sincronizando";
   let message = "Conectando con el equipo...";
 
-  const safeData = data as unknown as SafePayload;
-  const apiTimestamp = safeData?.data?.connectivity?.ts_end;
+  const sensor = data?.data?.sensor;
+  const connectivity = data?.data?.connectivity;
+  const apiTimestamp = connectivity?.ts_end;
+  const isPowerOn = sensor?.ac_state ?? false;
 
   if (error) {
     bgColor = "bg-red-500/10";
@@ -44,10 +28,9 @@ export function AlertBadge() {
 
     title = "Alerta Crítica";
     message = "Se perdió la conexión con el ESP32";
-  } else if (safeData) {
-    const isPowerOn = safeData?.data?.sensor?.ac_state;
-    const currentTemp = safeData?.data?.sensor?.avg_temperature;
-    const targetTemp = safeData?.data?.sensor?.desired_temperature ?? 24;
+  } else if (sensor) {
+    const currentTemp = sensor?.avg_temperature;
+    const targetTemp = sensor?.desired_temperature ?? 24;
 
     if (!isPowerOn) {
       AlertIcon = Power;
@@ -56,7 +39,7 @@ export function AlertBadge() {
       textColor = "text-zinc-300";
       dotColor = "bg-zinc-400";
 
-      title = "Sistema Apagado";
+      title = "Apagado";
       message = "El equipo se encuentra sin actividad.";
     } else if (currentTemp && currentTemp >= targetTemp + 1) {
       AlertIcon = Snowflake;
@@ -65,17 +48,8 @@ export function AlertBadge() {
       textColor = "text-sky-300";
       dotColor = "bg-sky-400";
 
-      title = "Sistema Activo";
+      title = "Enfriando";
       message = `Enfriando la habitación hasta los ${targetTemp}°C.`;
-    } else if (currentTemp && currentTemp <= targetTemp - 1) {
-      AlertIcon = Flame;
-      bgColor = "bg-red-500/10";
-      borderColor = "border-red-400/20";
-      textColor = "text-red-300";
-      dotColor = "bg-red-400";
-
-      title = "Sistema Activo";
-      message = `Calentando la habitación hasta los ${targetTemp}°C.`;
     } else {
       AlertIcon = CheckCircle;
       bgColor = "bg-emerald-500/10";
@@ -139,6 +113,7 @@ export function AlertBadge() {
               ${textColor}
             `}
           >
+            {sensor && isPowerOn && "Encendido - "}
             {title}
           </h4>
         </div>
@@ -148,10 +123,10 @@ export function AlertBadge() {
         {apiTimestamp && !error && (
           <p className="mt-3 text-xs text-zinc-400">
             Último ping:{" "}
-            {new Date(apiTimestamp)
-              .toISOString()
-              .replace("T", " ")
-              .slice(0, 19)}
+            {(() => {
+              const d = new Date(apiTimestamp);
+              return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(2, 4)} - ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+            })()}
           </p>
         )}
       </div>

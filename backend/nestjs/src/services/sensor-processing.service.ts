@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CreateSensorDto } from '../models/dto/create-sensor.dto';
 import { ProcessDataStrategy } from '../processing/interfaces/process-data.strategy';
 import { ProcessedSensorData } from 'src/models/entities/processed-sensor.entity';
@@ -11,6 +11,8 @@ export const INCOMING_SENSOR_DATA_STRATEGIES =
 
 @Injectable()
 export class SensorProcessingService {
+  private readonly logger = new Logger(SensorProcessingService.name);
+
   constructor(
     @Inject(INCOMING_SENSOR_DATA_STRATEGIES)
     private readonly strategies: ProcessDataStrategy<
@@ -36,12 +38,11 @@ export class SensorProcessingService {
     input.current_temperature.splice(input.valid_samples);
     input.desired_temperature.splice(input.valid_samples);
 
-    console.log('===========================================');
-    console.log("Service ${'sensor/datos'}: ", input);
-
     this.strategies.forEach((s) => {
       s.process(input, output);
     });
+
+    this.logger.log('Processing sensor/datos message', output);
 
     return this.sensorsRepository.saveData(output);
   }

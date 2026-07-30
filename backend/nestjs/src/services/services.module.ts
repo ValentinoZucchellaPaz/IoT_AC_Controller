@@ -1,5 +1,6 @@
 import { RepositoriesModule } from 'src/repositories/repositories.module';
 import { Module } from '@nestjs/common';
+import { MqttPublisherService } from './mqtt-publisher.service';
 import { DesiredTempModeStrategy } from 'src/processing/strategies/desired-temp-mode.strategy';
 import { CurrentTempStatsStrategy } from 'src/processing/strategies/current-temp-stats.strategy';
 import {
@@ -10,7 +11,7 @@ import {
   RESPONSE_DATA_STRATEGIES,
   ResponseProcessingService,
 } from './response-processing.service';
-import { EfficiencyAnalizerStrategy } from 'src/processing/strategies/efficiency-analyzer.strategy';
+import { EfficiencyAnalyzerStrategy } from 'src/processing/strategies/efficiency-analyzer.strategy';
 import { RetrieveDataService } from './retrieve-data.service';
 
 @Module({
@@ -22,7 +23,8 @@ import { RetrieveDataService } from './retrieve-data.service';
     RetrieveDataService, // register as injectable
     DesiredTempModeStrategy,
     CurrentTempStatsStrategy,
-    EfficiencyAnalizerStrategy,
+    EfficiencyAnalyzerStrategy,
+    MqttPublisherService,
 
     {
       provide: INCOMING_SENSOR_DATA_STRATEGIES,
@@ -35,11 +37,11 @@ import { RetrieveDataService } from './retrieve-data.service';
     },
     {
       provide: RESPONSE_DATA_STRATEGIES,
-      useFactory: (efficiencyAnalizerStrategy: EfficiencyAnalizerStrategy) => [
-        efficiencyAnalizerStrategy,
+      useFactory: (efficiencyAnalyzerStrategy: EfficiencyAnalyzerStrategy) => [
+        efficiencyAnalyzerStrategy,
       ],
 
-      inject: [EfficiencyAnalizerStrategy],
+      inject: [EfficiencyAnalyzerStrategy],
     },
   ],
 
@@ -48,6 +50,7 @@ import { RetrieveDataService } from './retrieve-data.service';
     SensorProcessingService,
     ResponseProcessingService,
     RetrieveDataService,
+    MqttPublisherService,
   ],
 })
 export class ServicesModule {}
