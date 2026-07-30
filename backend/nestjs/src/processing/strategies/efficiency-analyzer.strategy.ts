@@ -14,63 +14,68 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
   process(input: ProcessedSensorData[], output: HistoryReadingsDto): void {
     output.samples = input;
     const periods: HistoryReadingsDto['period_efficiency'] = [];
-    let startIndex: number | null = null;
 
-    for (let i = 0; i <= input.length; i++) {
-      const sample = input[i];
+    if (input.length === 0) {
+      output.period_efficiency = [];
+      return;
+    }
 
-      const isRunning = sample?.ac_state === true;
+    let periodStart = 0;
 
-      if (startIndex === null && isRunning) {
-        startIndex = i;
-        continue;
-      }
+    for (let i = 1; i <= input.length; i++) {
+      const isLast = i === input.length;
+      const prevDesired = input[i - 1].desired_temperature;
+      const currDesired = isLast ? null : input[i].desired_temperature;
 
-      const finishedPeriod =
-        startIndex !== null && (!isRunning || i === input.length);
+      if (!isLast && prevDesired === currDesired) continue;
 
-      if (!finishedPeriod) {
-        continue;
-      }
+      const periodSamples = input.slice(periodStart, i);
+      const firstSample = periodSamples[0];
+      const lastSample = periodSamples.at(-1)!;
 
-      const periodSamples = input.slice(startIndex!, i);
-
-      const first = periodSamples[0];
-      const last = periodSamples.at(-1)!;
-
-      let reachTimestamp: Date | null = null;
-
-      for (const current of periodSamples) {
-        if (current.avg_temperature <= current.desired_temperature) {
-          reachTimestamp = current.ts_end;
+      let activeStartIndex = -1;
+      for (let j = 0; j < periodSamples.length; j++) {
+        if (periodSamples[j].ac_state) {
+          activeStartIndex = j;
           break;
         }
       }
 
-      let efficiency: EfficiencyEnum;
+      let efficiency = EfficiencyEnum.LOW_EFFICIENCY;
 
-      if (reachTimestamp === null) {
-        efficiency = EfficiencyEnum.LOW_EFFICIENCY;
-      } else {
-        const minutes =
-          (reachTimestamp.getTime() - first.ts_end.getTime()) / (1000 * 60);
+      if (activeStartIndex !== -1) {
+        const activeSamples = periodSamples.slice(activeStartIndex);
+        const effectiveStart = activeSamples[0];
 
-        if (minutes <= 10) {
-          efficiency = EfficiencyEnum.HIGH_EFFICIENCY;
-        } else if (minutes <= 30) {
-          efficiency = EfficiencyEnum.MEDIUM_EFFICIENCY;
-        } else {
-          efficiency = EfficiencyEnum.LOW_EFFICIENCY;
+        let reachTimestamp: Date | null = null;
+
+        for (const sample of activeSamples) {
+          if (sample.avg_temperature <= sample.desired_temperature) {
+            reachTimestamp = sample.ts_end;
+            break;
+          }
+        }
+
+        if (reachTimestamp !== null) {
+          const minutes =
+            (reachTimestamp.getTime() - effectiveStart.ts_end.getTime()) /
+            (1000 * 60);
+
+          if (minutes <= 10) {
+            efficiency = EfficiencyEnum.HIGH_EFFICIENCY;
+          } else if (minutes <= 30) {
+            efficiency = EfficiencyEnum.MEDIUM_EFFICIENCY;
+          }
         }
       }
 
       periods.push({
-        from: first.ts_end,
-        to: last.ts_end,
+        from: firstSample.ts_end,
+        to: lastSample.ts_end,
         efficiency,
       });
 
-      startIndex = null;
+      periodStart = i;
     }
 
     output.period_efficiency = periods;
