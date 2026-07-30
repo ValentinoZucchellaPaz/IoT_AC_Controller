@@ -38,11 +38,11 @@ export class SensorProcessingService {
     input.current_temperature.splice(input.valid_samples);
     input.desired_temperature.splice(input.valid_samples);
 
-    this.logger.log('Processing sensor/datos message', input);
-
     this.strategies.forEach((s) => {
       s.process(input, output);
     });
+
+    this.logger.log('Processing sensor/datos message', output);
 
     return this.sensorsRepository.saveData(output);
   }
