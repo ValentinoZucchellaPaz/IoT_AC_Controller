@@ -12,6 +12,7 @@ import {
   Filler,
   Legend,
   ScriptableContext,
+  TooltipItem,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { HistoryData, HistoryObserver } from "@/types/history.types";
@@ -46,6 +47,8 @@ export function TemperatureChart() {
       historyStore.unsubscribe(observer);
     };
   }, []);
+
+  const [showEffInfo, setShowEffInfo] = useState(false);
 
   const gapIndices = useMemo(
     () => (historyData?.samples ? detectGaps(historyData.samples) : []),
@@ -132,8 +135,25 @@ export function TemperatureChart() {
         backgroundColor: "rgba(0,0,0,0.8)",
         padding: 12,
         titleFont: { size: 13 },
-        bodyFont: { size: 14, weight: "bold" as const },
+        bodyFont: { size: 13 },
         displayColors: true,
+        callbacks: {
+          labelColor(context: TooltipItem<"line">) {
+            const colors: Record<string, string> = {
+              "Promedio (°C)": "#ffffff",
+              "Máxima (°C)": "rgba(255,100,100,0.85)",
+              "Mínima (°C)": "rgba(100,200,255,0.85)",
+            };
+            const c = colors[context.dataset.label ?? ""] || "#ffffff";
+            return { borderColor: c, backgroundColor: c };
+          },
+          afterBody(tooltipItems: TooltipItem<"line">[]) {
+            const index = tooltipItems[0].dataIndex;
+            const sample = historyData?.samples[index];
+            if (!sample) return [];
+            return [`Temp deseada: ${sample.desired_temperature}°C`];
+          },
+        },
       },
     },
     scales: {
@@ -170,7 +190,7 @@ export function TemperatureChart() {
         <h3 className="text-base font-semibold flex items-center gap-2 text-white">
           <i className="ph ph-drop text-xl text-blue-400"></i> Temperatura
         </h3>
-        <div className="flex items-center gap-3 text-[11px] text-white/60" title="Eficiencia del AC: mientras el equipo estuvo encendido, se mide cuánto tardó en alcanzar la temperatura deseada. Verde = &lt;10 min, Naranja = &lt;30 min, Rojo = &gt;30 min.">
+        <div className="flex items-center gap-3 text-[11px] text-white/60">
           <span className="text-white/40">Eficiencia:</span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-green-500/30" />
@@ -184,9 +204,29 @@ export function TemperatureChart() {
             <span className="w-3 h-3 rounded-sm bg-red-500/30" />
             Baja
           </span>
-          <span className="relative group">
-            <i className="ph ph-info text-white/30 cursor-help hover:text-white/60 transition-colors" />
-          </span>
+          <div className="relative inline-flex">
+            <button
+              onClick={() => {
+                if (window.innerWidth >= 768) return;
+                setShowEffInfo(prev => !prev);
+              }}
+              onMouseEnter={() => {
+                if (window.innerWidth >= 768) setShowEffInfo(true);
+              }}
+              onMouseLeave={() => {
+                if (window.innerWidth >= 768) setShowEffInfo(false);
+              }}
+              className="w-4 h-4 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[10px] text-white/60 hover:text-white/90 transition-colors"
+              aria-label="Info eficiencia"
+            >
+              ?
+            </button>
+            <div className={`absolute bottom-full right-0 mb-2 w-56 p-2 rounded-lg bg-slate-800/95 border border-white/10 text-[10px] text-white/70 leading-relaxed z-10 transition-all duration-200
+              ${showEffInfo ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}
+            >
+              Eficiencia del AC: mientras el equipo estuvo encendido, se mide cuánto tardó en alcanzar la temperatura deseada. Verde = &lt;10 min, Naranja = &lt;30 min, Rojo = &gt;30 min.
+            </div>
+          </div>
         </div>
       </div>
       {/* Graph */}
