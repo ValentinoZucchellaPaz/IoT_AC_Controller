@@ -1,6 +1,5 @@
 "use client";
 import { HumidityChart } from "@/components/charts/HumidityChart";
-import { SensorComparisonChart } from "@/components/charts/SensorComparisonChart";
 import { TemperatureChart } from "@/components/charts/TemperatureChart";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { useHistoryData } from "@/hooks/useHistoryData";
@@ -56,12 +55,9 @@ export default function HistoryPage() {
             <p className="mt-2 text-zinc-400">No se encontraron mediciones para el período seleccionado.</p>
           </div>
         ) : (
-          <div className="my-6 grid gap-6 lg:grid-cols-2">
+          <div className="my-6 flex flex-col gap-6">
             <TemperatureChart />
             <HumidityChart />
-            <div className="lg:col-span-2">
-              <SensorComparisonChart />
-            </div>
           </div>
         )}
       </section>
