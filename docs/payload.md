@@ -1,10 +1,14 @@
-# Payload MQTT (ESP32 → Backend)
+# Especificación de la API REST y Payloads MQTT
 
-Topic:
+La documentación interactiva de la API está disponible via Swagger en:
 
-```text
-sensor/datos
-```
+> **http://localhost:3000/api** (con el backend corriendo)
+
+---
+
+## Payload MQTT — ESP32 → Backend
+
+### Topic: `sensor/datos`
 
 Payload:
 
@@ -15,26 +19,26 @@ Payload:
   "desired_temperature": [22.0, 22.5, 23.0],
   "current_temperature": [23.4, 22.8, 22.5],
   "valid_samples": 3,
+  "current_humidity": 55.0,
   "ts_end": 1780617600
 }
 ```
 
-Campos:
-
-| Campo               | Tipo     | Descripción                                                               |
-| ------------------- | -------- | ------------------------------------------------------------------------- |
-| device_id           | string   | Identificador único del dispositivo                                       |
-| ac_state            | boolean  | Estado del aire acondicionado                                             |
-| desired_temperature | number[] | Temperaturas objetivo registradas durante el período                      |
-| current_temperature | number[] | Temperaturas medidas durante el período                                   |
-| valid_samples       | number   | Cantidad de muestras válidas                                              |
-| ts_end              | number   | Unix Timestamp (segundos) correspondiente al final del período muestreado |
+| Campo | Tipo | Descripción |
+|---|---|---|
+| device_id | string | Identificador único del dispositivo |
+| ac_state | boolean | Estado del aire acondicionado |
+| desired_temperature | number[] | Temperaturas objetivo registradas |
+| current_temperature | number[] | Temperaturas medidas |
+| valid_samples | number | Cantidad de muestras válidas |
+| current_humidity | number | Humedad actual |
+| ts_end | number | Unix Timestamp (seg) del fin del período |
 
 ---
 
-# Respuestas HTTP
+## Respuestas HTTP
 
-Todas las respuestas siguen la misma estructura base:
+Todas las respuestas siguen la estructura base:
 
 ```json
 {
@@ -44,100 +48,75 @@ Todas las respuestas siguen la misma estructura base:
 }
 ```
 
-## ErrorResponseDTO
-
-Se devuelve cuando ocurre un error de validación o procesamiento.
-
-Ejemplo:
+### ErrorResponseDTO — sin datos
 
 ```json
 {
   "success": false,
-  "timestamp": "2026-06-05T18:59:35.032Z",
+  "message": "No data available",
   "error": {
-    "code": 400,
-    "message": "Validation failed (enum string is expected)"
+    "code": "NO_CONTENT",
+    "detail": "No sensor data found"
   },
-  "path": "/data/history/8"
+  "timestamp": "2026-06-02T07:47:46.746Z"
 }
 ```
 
-Campos:
-
-| Campo         | Tipo    | Descripción                  |
-| ------------- | ------- | ---------------------------- |
-| success       | boolean | Siempre false                |
-| timestamp     | string  | Fecha y hora de la respuesta |
-| error.code    | number  | Código HTTP                  |
-| error.message | string  | Descripción del error        |
-| path          | string  | Endpoint solicitado          |
-
 ---
 
-## SensorResponseDTO
+## GET /data/last
 
-Devuelve la última muestra procesada almacenada en la base de datos.
-
-Endpoint:
-
-```http
-GET /data/last
-```
-
-Ejemplo:
+Última muestra procesada + estado de conectividad.
 
 ```json
 {
   "success": true,
   "message": "ok",
   "data": {
-    "id": 14,
-    "device_id": "ESP32_01",
-    "ac_state": false,
-    "desired_temperature": 22,
-    "min_temperature": 27,
-    "max_temperature": 27,
-    "avg_temperature": 27,
-    "ts_end": "2026-06-01T04:25:00.000Z",
-    "created_at": "2026-06-02T10:09:38.092Z"
+    "sensor": {
+      "device_id": "ESP32_01",
+      "ac_state": false,
+      "desired_temperature": 22,
+      "min_temperature": 27,
+      "max_temperature": 27,
+      "avg_temperature": 27,
+      "current_humidity": 55,
+      "ts_end": "2026-06-01T04:25:00.000Z"
+    },
+    "connectivity": {
+      "status": true,
+      "ts_end": "2026-06-01T04:25:00.000Z"
+    }
   },
   "timestamp": "2026-06-02T07:47:46.746Z"
 }
 ```
 
-### ProcessedSensorData
+### Campos
 
-| Campo               | Tipo    | Descripción                            |
-| ------------------- | ------- | -------------------------------------- |
-| id                  | number  | Identificador autogenerado             |
-| device_id           | string  | Dispositivo que generó la muestra      |
-| ac_state            | boolean | Estado del aire acondicionado          |
-| desired_temperature | number  | Temperatura deseada procesada          |
-| min_temperature     | number  | Temperatura mínima del período         |
-| max_temperature     | number  | Temperatura máxima del período         |
-| avg_temperature     | number  | Temperatura promedio del período       |
-| ts_end              | Date    | Fin del período muestreado             |
-| created_at          | Date    | Fecha de inserción en la base de datos |
+| Campo | Tipo | Descripción |
+|---|---|---|
+| data.sensor.device_id | string | Dispositivo |
+| data.sensor.ac_state | boolean | Estado del AA |
+| data.sensor.desired_temperature | number | Temperatura deseada (moda del período) |
+| data.sensor.min_temperature | number | Mínima del período |
+| data.sensor.max_temperature | number | Máxima del período |
+| data.sensor.avg_temperature | number | Promedio del período |
+| data.sensor.current_humidity | number | Humedad |
+| data.sensor.ts_end | string (ISO) | Fin del período |
+| data.connectivity.status | boolean | true = online |
+| data.connectivity.ts_end | string (ISO) | Último heartbeat |
 
 ---
 
-## SensorHistoryResponseDTO
+## GET /data/history/{period}
 
-Devuelve muestras históricas junto con el análisis de eficiencia realizado por el backend.
-
-Endpoint:
-
-```http
-GET /data/history/{period}
-```
-
-Ejemplo:
+Períodos válidos: `1h`, `6h`, `12h`, `1d`, `3d`, `7d`
 
 ```json
 {
   "success": true,
   "message": "ok",
-  "timestamp": "2026-06-02T07:47:34.684Z",
   "total": 17,
   "data": {
     "samples": [
@@ -149,62 +128,70 @@ Ejemplo:
         "min_temperature": 22,
         "max_temperature": 28,
         "avg_temperature": 24,
+        "current_humidity": 55,
         "ts_end": "2026-06-01T03:10:00.000Z",
         "created_at": "2026-06-02T10:09:38.092Z"
       }
     ],
-    "period_efficency": [
+    "period_efficiency": [
       {
         "from": "2026-06-01T03:10:00.000Z",
         "to": "2026-06-01T03:20:00.000Z",
-        "efficency": 2
+        "efficiency": 0
       }
     ]
-  }
+  },
+  "timestamp": "2026-06-02T07:47:34.684Z"
 }
 ```
 
-Campos adicionales:
-
-| Campo                 | Tipo                  | Descripción                           |
-| --------------------- | --------------------- | ------------------------------------- |
-| total                 | number                | Cantidad de registros recuperados     |
-| data.samples          | ProcessedSensorData[] | Muestras históricas                   |
-| data.period_efficency | EfficiencyPeriod[]    | Períodos de funcionamiento detectados |
-
-### EfficiencyPeriod
-
-| Campo     | Tipo   | Descripción                           |
-| --------- | ------ | ------------------------------------- |
-| from      | Date   | Inicio del período con AC encendido   |
-| to        | Date   | Fin del período con AC encendido      |
-| efficency | number | Clasificación de eficiencia calculada |
-
 ### EfficiencyEnum
 
-| Valor | Significado       |
-| ----- | ----------------- |
-| 0     | HIGH_EFFICIENCY   |
-| 1     | MEDIUM_EFFICIENCY |
-| 2     | LOW_EFFICIENCY    |
+| Valor | Significado | Criterio |
+|---|---|---|
+| 0 | LOW_EFFICIENCY | > 30 min o nunca alcanzó la temperatura deseada |
+| 1 | MEDIUM_EFFICIENCY | Entre 10 y 30 min |
+| 2 | HIGH_EFFICIENCY | ≤ 10 min |
+
+Los períodos de eficiencia se agrupan por **temperatura deseada contigua** (no por estado del AC).
 
 ---
 
-## Períodos válidos para consultas históricas
+## POST /devices/command
 
-```text
-1h
-6h
-12h
-1d
-3d
-7d
-```
-
-Ejemplo:
+Envía un comando de temperatura a un dispositivo vía MQTT.
 
 ```http
-GET /data/history/7d
+POST /devices/command
+Content-Type: application/json
+
+{
+  "device_id": "ESP32_01",
+  "desired_temperature": 22.5
+}
 ```
 
-Una mejora a futuro es cambiar `efficency: 0/1/2` por `"HIGH"`, `"MEDIUM"`, `"LOW"` en la API.
+Respuesta:
+
+```json
+{
+  "success": true,
+  "message": "Temperature command published to ESP32_01"
+}
+```
+
+Validación: `desired_temperature` debe estar entre 15 y 32.
+
+---
+
+## GET /health
+
+Health check del backend.
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-07-29T12:00:00.000Z",
+  "uptime": 12345
+}
+```

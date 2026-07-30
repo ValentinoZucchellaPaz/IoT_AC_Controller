@@ -9,7 +9,7 @@
 auto constexpr SERIAL_BAUD_RATE = 115200;
 auto constexpr DELAY_BETWEEN_TASKS_MS = 100;
 
-auto constexpr HYSTERESIS_BAND = 1.5f;
+auto constexpr HYSTERESIS_BAND = 3f;
 auto constexpr HYSTERESIS_HALF = HYSTERESIS_BAND / 2.0f;
 
 unsigned long lastSampleTime = 0;

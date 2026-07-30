@@ -1,76 +1,125 @@
-# Especificación de la Lógica de Dominio – Sistema de Control de Aire Acondicionado
+# Lógica de Dominio — Sistema de Control de Aire Acondicionado
 
-Este documento define las reglas de negocio, algoritmos y patrones de diseño que residen en el dominio del sistema. Esta capa representa el modelo lógico del aire acondicionado, diseñado para ser independiente de cualquier detalle de implementación externa (HTTP, base de datos, WebSockets, frontend).
+## Arquitectura
 
-## 1. Entidad principal: ProcessedSensor
+El backend NestJS implementa una variante simplificada de **Clean Architecture**:
 
-### 1.1. ProcessedSensor
-Representa el estado consolidado del entorno e indicadores calculados en un intervalo de tiempo.
-- **Atributos:** `device_id` (string), `ac_state` (boolean), `desired_temperature` (16-30°C), `avg_temperature` (-10 a 50°C), `humidity` (number), `ts_end` (number(timestamp)).
-- **Invariantes:** La entidad es autovalidante en su constructor de dominio. 
+```
+Controller → Service → Strategy → Repository → TypeORM → PostgreSQL
+```
 
-### 1.2. Regla de Frecuencia de Muestreo (Mantenimiento de Estado)
-El dispositivo físico (ESP32) regula el envío de cargas útiles hacia el dominio en función de su estado operativo actual para optimizar el consumo de red y el almacenamiento:
-- **Estado Encendido (`ac_state: true`):** El intervalo de publicación de lecturas al broker MQTT es estrictamente de **1 minuto**.
-- **Estado Apagado (`ac_state: false`):** El intervalo de publicación se relaja a **5 minutos**, actuando como un latido de corazón (*heartbeat*) para certificar la vitalidad del hardware sin saturar la persistencia.
+Las estrategias siguen el patrón **Strategy**, inyectadas via tokens de NestJS.
 
-### 2. Algoritmos de Procesamiento (Estrategias)
+---
 
-El sistema procesa las ráfagas de datos crudos provenientes del broker MQTT mediante algoritmos encapsulados que analizan las tendencias del dispositivo:
+## 1. Estrategias de Procesamiento (Strategy Pattern)
 
-### 2.1. Análisis de Eficiencia (`EfficiencyAnalyzerStrategy`)
-- **Propósito:** Evaluar la velocidad y capacidad de respuesta del equipo de climatización para alcanzar el objetivo deseado, clasificando el rendimiento del compresor en niveles discretos (High, Medium, Low Efficiency).
+### CurrentTempStatsStrategy
 
-### 2.2. Estadísticas de Temperatura Actual (`CurrentTempStatsStrategy`)
-- **Propósito:** Calcular promedios ponderados y desviaciones térmicas en tiempo real a partir de las muestras enviadas por los sensores analógicos del hardware.
+Calcula estadísticas de las temperaturas actuales del lote de muestras:
 
-### 2.3. Modo de Temperatura Deseada (`DesiredTempModeStrategy`)
-- **Propósito:** Evaluar consistencias, cambios de comportamiento del usuario y la persistencia de las consignas térmicas fijadas en el dispositivo.
+- `min_temperature` = mínimo del array
+- `max_temperature` = máximo del array
+- `avg_temperature` = promedio, redondeado a 2 decimales
 
+### DesiredTempModeStrategy
 
-## 3. Patrones de Diseño
+Calcula la **moda** (valor más frecuente) del array `desired_temperature`. En caso de empate, se queda con el primer valor encontrado.
 
-### 3.1. Observer
+### EfficiencyAnalyzerStrategy
 
-Permite que el dominio sea reactivo y extienda su funcionalidad sin modificar el núcleo.
+Analiza la eficiencia del sistema en alcanzar la temperatura deseada. Se aplica sobre datos históricos.
 
-### 3.2. Strategy
+**Agrupación**: los períodos se dividen por **temperatura deseada contigua** (cada vez que `desired_temperature` cambia, empieza un nuevo período).
 
-Se aplica para dar flexibilidad al procesamiento de los datos históricos.
+**Lógica por período**:
 
-- *Interfaz:* FilterStrategy { filter(history: ReadingData[]): ReadingData[] }
+1. Buscar el primer `ac_state = true` dentro del período
+2. Desde ese punto, buscar cuándo `avg_temperature <= desired_temperature` por primera vez
+3. Calcular los minutos transcurridos desde el inicio del AC hasta alcanzar la temperatura
 
-- *Estrategias concretas:*
+**Clasificación**:
 
-- OnlyOnFilter: Procesa únicamente lecturas donde el AC estuvo encendido.
+| Eficiencia | Tiempo en alcanzar objetivo |
+|---|---|
+| HIGH_EFFICIENCY (2) | ≤ 10 minutos |
+| MEDIUM_EFFICIENCY (1) | ≤ 30 minutos |
+| LOW_EFFICIENCY (0) | > 30 minutos o nunca alcanzado |
 
-- LastNFilter: Considera solo las últimas N lecturas para cálculos de corto plazo.
+---
 
-- *Uso:* El algoritmo de detección de anomalías utiliza estas estrategias para decidir qué porción del historial es relevante para el análisis actual.
+## 2. Servicios
 
-## 4. Servicio de Dominio 
+### SensorProcessingService
 
-Es el punto de entrada a la lógica de negocio que coordina las entidades, los repositorios y los patrones de comportamiento.
+Punto de entrada para datos entrantes vía MQTT (`sensor/datos`).
 
-- **`SensorProcessingService` (`processIncomingData`):**
-  - Recibe la carga útil del sensor (`CreateSensorDto`) transmitida por la capa de conectividad MQTT.
-  - Ejecuta de forma secuencial y polimórfica mediante un ciclo `forEach` las estrategias de análisis inyectadas bajo el contrato `ProcessDataStrategy<I, O>`.
-  - Transforma las lecturas crudas en la estructura mapeada por la entidad de dominio y delega su persistencia al repositorio mediante `sensorsRepository.saveData(output)`.
+1. Setea campos base en `ProcessedSensorData` (device_id, humidity, ac_state, ts_end)
+2. Trunca arrays a `valid_samples`
+3. Aplica todas las estrategias inyectadas via `INCOMING_SENSOR_DATA_STRATEGIES`
+4. Persiste via `SensorsRepository.saveData()`
 
-- **`RetrieveDataService` (`getLastSample` / `getHistorySamples`):**
-  - **`getLastSample()`:** Retorna la última lectura consolidada del sensor procesada en tiempo real invocando a `findLastData()`. Si no existen registros, el controlador intercepta y retorna un error semántico de tipo `NO_CONTENT`.
-  - **`getHistorySamples(period)`:** Calcula los límites de tiempo Unix (`fromTs` y `toTs`) resolviendo el bloque condicional `switch(period)` según el rango solicitado (1h, 6h, 12h, 1d, 3d, 7d) y recupera la colección analítica histórica de la base de datos.
+Lanza error si `valid_samples == 0`.
 
-## 5. Restricciones del dominio 
+También procesa `sensor/status` (health checks) via `saveSensorStatus()`.
 
-- No accede a base de datos, sistema de archivos, red, HTTP, WebSockets ni ningún protocolo de comunicación.
+### ResponseProcessingService
 
-- No genera timestamps propios (los recibe como parte de ReadingData).
+Punto de entrada para respuestas HTTP históricas.
 
-- No maneja la interfaz de usuario ni envía datos al frontend.
+Aplica estrategias de análisis (solo `EfficiencyAnalyzerStrategy`) a los datos históricos recuperados de la DB.
 
-- No depende de librerías externas excepto TypeScript estándar y Math.
+### RetrieveDataService
 
-- No utiliza console.log, console.error ni ninguna salida por consola como parte de su comportamiento normal (solo puede usarse para depuración temporal durante el desarrollo, pero no se debe incluir en la versión final integrada).
+Intermediario entre controllers y repository:
 
-- No realiza ninguna operación de entrada/salida (I/O) de ningún tipo.
+- `getLastSample()` → `SensorsRepository.findLastData()`
+- `getHistorySamples(period)` → calcula rango temporal y llama a `findHistoryData()`
+- `getLastStatus()` → `SensorsRepository.findLastStatus()`
+
+### MqttPublisherService
+
+Permite al backend publicar comandos MQTT a dispositivos (ej: cambiar temperatura deseada).
+
+Topic: `devices/{device_id}/command`
+
+Payload: `{"desired_temperature": 22.5}`
+
+---
+
+## 3. Entidades
+
+### ProcessedSensorData (tabla `sensor_readings`)
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | number (PK) | Autogenerado |
+| device_id | string | Identificador del dispositivo |
+| ac_state | boolean | Estado del AA |
+| desired_temperature | float | Temp deseada (moda del período) |
+| min_temperature | float | Temp mínima |
+| max_temperature | float | Temp máxima |
+| avg_temperature | float | Temp promedio |
+| current_humidity | float | Humedad |
+| ts_end | timestamptz | Fin del período de muestreo |
+| created_at | timestamptz | Fecha de inserción |
+
+### HealthSensorData (tabla `sensor_health`)
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | number (PK) | Autogenerado |
+| device_id | string | Identificador del dispositivo |
+| status | boolean | true = online |
+| ts_end | timestamptz | Timestamp del heartbeat |
+
+---
+
+## 4. Reglas de Negocio
+
+- **Rango temperatura deseada**: 15–32 °C
+- **Histéresis**: ±0.75 °C alrededor de la deseada
+- **Frecuencia MQTT**: 1 min (AC on), 5 min (AC off)
+- **Buffer máximo**: 20 muestras por publicación
+- **Fallback DHT11**: 30.0 °C si el sensor falla
+- **IDs de dispositivo**: formato `ESP32_XX` (ej: `ESP32_01`)

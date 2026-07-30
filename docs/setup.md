@@ -1,166 +1,113 @@
 # Guía de Configuración del Proyecto
 
-Este documento explica cómo configurar el entorno de desarrollo en tu computadora.
-Todos los integrantes del equipo deben seguir estos pasos después de clonar el repositorio.
+## Prerrequisitos
 
----
+| Herramienta | Versión | Descarga |
+|---|---|---|
+| **Node.js** | 22 LTS | https://nodejs.org (o `nvm install` en cada subproyecto) |
+| **Docker** | Última | https://docs.docker.com/engine/install/ |
+| **Docker Compose** | Última | (incluido con Docker Desktop) |
+| **Git** | Última | https://git-scm.com |
+| **PlatformIO** | Última | `pip install platformio` |
 
-## Prerequisitos
-
-Asegurate de tener instalado lo siguiente antes de comenzar:
-
-| Herramienta        | Versión        | Descarga                                 |
-| ------------------ | -------------- | ---------------------------------------- |
-| **Node.js**        | 18 o superior  | https://nodejs.org                       |
-| **Git**            | Última versión | https://git-scm.com                      |
-| **Docker**         | Última versión | https://docs.docker.com/engine/install/  |
-| **Docker Compose** | Última versión | https://docs.docker.com/compose/install/ |
-
-Para verificar que están instalados:
+Verificar instalación:
 
 ```bash
-node --version              # debe mostrar v18.x.x o superior
-npm --version               # debe mostrar 9.x.x o superior
-git --version               # debe mostrar 2.x.x o superior
-docker --version            # debe mostrar 29.x.x o superior
-docker-compose --version    # debe mostrar 1.x.x o superior
+node --version       # v22.x.x
+npm --version        # 10.x.x
+docker --version
+docker compose version
+git --version
+pio --version
 ```
-
----
 
 ## Configuración Inicial
 
-### 1. Clonar el repositorio
+### 1. Clonar y configurar variables de entorno
 
 ```bash
 git clone https://github.com/ICOMP-UNC/sof-eng-2026-runtime-terror.git
 cd sof-eng-2026-runtime-terror
+cp .env.example .env
 ```
 
-### 2. Levantar infraestructura
-
-Con los siguientes comando vamos a levantar la base de datos y el servicio de comunicacion MQTT
+### 2. Levantar infraestructura (PostgreSQL + MQTT)
 
 ```bash
-# Vamos al path de docker-compose.yml y ejecutamos:
 cd docker
 docker compose up -d
-
-# Verificar que los contenedores estén ejecutándose:
-docker ps
+docker compose ps
 ```
 
-### 3. Instalar dependencias. Arrancar back y front
+Ambos servicios deberían aparecer como "Up":
+- `soft-eng-postgres` (puerto 5433)
+- `soft-eng-mosquitto` (puerto 1883)
+
+### 3. Backend NestJS
 
 ```bash
 cd backend/nestjs
+nvm use                    # asegurar Node 22
 npm install
-npm run dev
-# opcionalemente hacer seed de db aqui
-
-cd ../../frontend/dashboard
-cp .env.example .env
-npm install
-npm run dev
+npm run dev                # http://localhost:3000
 ```
 
-##### Poblar DB para pruebas
+Swagger disponible en http://localhost:3000/api
 
-En caso que se quieran hacer pruebas sin tener el ESP32 funcionando, se debe realizar la carga manual de valores al backend, lo cual en este caso se logro publicando valores al topic de MQTT (de esta manera tambien se verifica que el backend funciona bien)
-
-Luego de levantar el backend (estando en el path ./backend/nestjs) correr el siguiente comando:
+### 4. Frontend Dashboard
 
 ```bash
+cd frontend/dashboard
+cp .env.example .env
+nvm use
+npm install
+npm run dev                # http://localhost:3001
+```
+
+### 5. Poblar base de datos con datos de prueba (opcional)
+
+```bash
+cd backend/nestjs
 npm run mqtt:seed
 ```
 
-Se puede verificar la carga viendo los logs del backend
+Esto publica mensajes MQTT falsos al topic `sensor/datos` simulando un ESP32. Se puede verificar en los logs del backend.
 
----
-
-## Hooks de Git — Validaciones Automáticas
-
-Este proyecto usa **Husky** para correr validaciones automáticas en cada commit y push.
-Se instala haciendo install desde la raiz:
+### 6. Firmware ESP32
 
 ```bash
+cd firmware/esp32
+cp include/config_local.example.hpp include/config_local.hpp
+# Editar config_local.hpp con SSID, password y dirección del broker MQTT
+pio run -t upload          # flashear ESP32
+pio device monitor         # ver logs por serie
+```
+
+## Hooks de Git (Husky)
+
+Se activan automáticamente al hacer `npm install` en la raíz del proyecto:
+
+```bash
+# Desde la raíz del repositorio
 npm install
 ```
 
-### commit-msg — Validación del mensaje de commit
+- **commit-msg**: valida formato `<tipo>(SCRUM-N): descripción`
+- **pre-commit**: ejecuta ESLint sobre el backend NestJS
+- **pre-push**: ejecuta `npm run build` en el backend
 
-Cada mensaje de commit es validado contra la convención definida en
-[COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md).
-
-**Cómo probarlo:**
-
-```bash
-# Mensaje inválido — debe ser RECHAZADO
-git commit -m "listo"
-# Resultado esperado: ✖ commit rechazado con mensaje de error
-
-# Mensaje válido — debe ser ACEPTADO
-git commit -m "feat(SCRUM-1): add initial project setup"
-# Resultado esperado: ✔ commit aceptado
-```
-
-### pre-commit — Validación del linter
-
-Antes de cada commit, ESLint corre automáticamente sobre el código del backend.
-Si hay errores de linting, el commit se bloquea hasta que sean corregidos.
-Ya estan instaladas las dependencias si ya hiciste el paso 3.
-
-**Cómo probarlo:**
+## Verificación
 
 ```bash
-# 1. Introducí un error de lint intencional en cualquier archivo .ts
-#    dentro de backend/nestjs/src/
-#    Por ejemplo, declarar una variable y no usarla:
-#    const unused = 'esto va a fallar'
-
-# 2. Intentá hacer un commit
-git add .
-git commit -m "feat(SCRUM-1): test lint hook"
-# Resultado esperado: ✖ commit bloqueado — ESLint encontró errores
-
-# 3. Corregí el error e intentá de nuevo
-# Resultado esperado: ✔ commit aceptado
+cd backend/nestjs && npm run lint && npm test
+cd frontend/dashboard && npm test
 ```
 
-> **Importante:**
->
-> - Los **errores** de ESLint bloquean el commit
-> - Los **warnings** de ESLint NO bloquean el commit
-> - El linting aplica actualmente al backend NestJS únicamente
+## Puertos y conexiones
 
-### pre-push — Validación de tests
-
-Antes de cada push, la suite de tests corre automáticamente.
-Si algún test falla, el push se bloquea.
-
-**Cómo probarlo:**
-
-```bash
-git push origin feature/tu-rama
-# Si todos los tests pasan: el push se realiza ✔
-# Si algún test falla: el push se bloquea ✖
-```
-
----
-
-## Verificación Final
-
-Corré este checklist después de configurar todo:
-
-```bash
-# 1. Husky está activo — debe ser rechazado
-git commit -m "listo"
-
-# 2. El linter corre correctamente — debe mostrar 0 errores
-cd backend/nestjs && npm run lint
-
-# 3. Los tests corren correctamente — deben pasar todos
-cd backend/nestjs && npm test
-```
-
----
+| Servicio | Puerto host |
+|---|---|
+| PostgreSQL | 5433 |
+| MQTT (Mosquitto) | 1883 |
+| Backend NestJS | 3000 |
+| Frontend Next.js | 3001 |
