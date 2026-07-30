@@ -20,45 +20,37 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
       return;
     }
 
-    let periodStart = 0;
+    let periodStart: number | null = null;
 
-    for (let i = 1; i <= input.length; i++) {
+    for (let i = 0; i <= input.length; i++) {
       const isLast = i === input.length;
-      const prevDesired = input[i - 1].desired_temperature;
-      const currDesired = isLast ? null : input[i].desired_temperature;
+      const sample = isLast ? null : input[i];
 
-      if (!isLast && prevDesired === currDesired) continue;
+      const shouldEndPeriod =
+        periodStart !== null &&
+        (isLast ||
+          !sample!.ac_state ||
+          sample!.desired_temperature !== input[i - 1].desired_temperature);
 
-      const periodSamples = input.slice(periodStart, i);
-      const firstSample = periodSamples[0];
-      const lastSample = periodSamples.at(-1)!;
+      if (shouldEndPeriod) {
+        const periodSamples = input.slice(periodStart, i);
+        const firstSample = periodSamples[0];
+        const lastSample = periodSamples.at(-1)!;
 
-      let activeStartIndex = -1;
-      for (let j = 0; j < periodSamples.length; j++) {
-        if (periodSamples[j].ac_state) {
-          activeStartIndex = j;
-          break;
-        }
-      }
-
-      let efficiency = EfficiencyEnum.LOW_EFFICIENCY;
-
-      if (activeStartIndex !== -1) {
-        const activeSamples = periodSamples.slice(activeStartIndex);
-        const effectiveStart = activeSamples[0];
+        let efficiency = EfficiencyEnum.LOW_EFFICIENCY;
 
         let reachTimestamp: Date | null = null;
 
-        for (const sample of activeSamples) {
-          if (sample.avg_temperature <= sample.desired_temperature) {
-            reachTimestamp = sample.ts_end;
+        for (const s of periodSamples) {
+          if (s.avg_temperature <= s.desired_temperature) {
+            reachTimestamp = s.ts_end;
             break;
           }
         }
 
         if (reachTimestamp !== null) {
           const minutes =
-            (reachTimestamp.getTime() - effectiveStart.ts_end.getTime()) /
+            (reachTimestamp.getTime() - firstSample.ts_end.getTime()) /
             (1000 * 60);
 
           if (minutes <= 10) {
@@ -67,15 +59,19 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
             efficiency = EfficiencyEnum.MEDIUM_EFFICIENCY;
           }
         }
+
+        periods.push({
+          from: firstSample.ts_end,
+          to: lastSample.ts_end,
+          efficiency,
+        });
+
+        periodStart = null;
       }
 
-      periods.push({
-        from: firstSample.ts_end,
-        to: lastSample.ts_end,
-        efficiency,
-      });
-
-      periodStart = i;
+      if (!isLast && sample!.ac_state && periodStart === null) {
+        periodStart = i;
+      }
     }
 
     output.period_efficiency = periods;

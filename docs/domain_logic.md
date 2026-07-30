@@ -30,13 +30,16 @@ Calcula la **moda** (valor más frecuente) del array `desired_temperature`. En c
 
 Analiza la eficiencia del sistema en alcanzar la temperatura deseada. Se aplica sobre datos históricos.
 
-**Agrupación**: los períodos se dividen por **temperatura deseada contigua** (cada vez que `desired_temperature` cambia, empieza un nuevo período).
+**Agrupación**: los períodos se crean con dos criterios combinados:
+
+1. **`ac_state`**: las muestras con `ac_state = false` no pertenecen a ningún período y lo cortan si estaba activo.
+2. **`desired_temperature` contigua**: dentro de un bloque con `ac_state = true`, si la temperatura deseada cambia, empieza un nuevo período.
+
+Cada período contiene exclusivamente muestras con `ac_state = true` y la misma temperatura deseada.
 
 **Lógica por período**:
 
-1. Buscar el primer `ac_state = true` dentro del período
-2. Desde ese punto, buscar cuándo `avg_temperature <= desired_temperature` por primera vez
-3. Calcular los minutos transcurridos desde el inicio del AC hasta alcanzar la temperatura
+1. Calcular los minutos desde el inicio del período hasta alcanzar la temperatura deseada (`avg_temperature <= desired_temperature` por primera vez)
 
 **Clasificación**:
 
