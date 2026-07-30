@@ -28,8 +28,10 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
 
       const shouldEndPeriod =
         isLast ||
-        !sample!.ac_state ||
-        sample!.desired_temperature !== input[i - 1].desired_temperature;
+        (sample && !sample.ac_state) ||
+        (sample &&
+          i > 0 &&
+          sample.desired_temperature !== input[i - 1].desired_temperature);
 
       if (shouldEndPeriod && periodStart !== null) {
         const periodSamples = input.slice(periodStart, i);
@@ -68,7 +70,7 @@ export class EfficiencyAnalyzerStrategy implements ProcessDataStrategy<
         periodStart = null;
       }
 
-      if (!isLast && sample!.ac_state && periodStart === null) {
+      if (sample && sample.ac_state && periodStart === null) {
         periodStart = i;
       }
     }
