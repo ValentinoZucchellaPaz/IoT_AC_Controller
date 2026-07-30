@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,6 +16,7 @@ import {
 import { Line } from "react-chartjs-2";
 import { HistoryData, HistoryObserver } from "@/types/history.types";
 import { historyStore } from "@/observer/history-store-instance";
+import { createGapPlugin, detectGaps } from "./gap-plugin";
 
 ChartJS.register(
   CategoryScale,
@@ -45,21 +46,24 @@ export function HumidityChart() {
     };
   }, []);
 
+  const gapIndices = useMemo(
+    () => (historyData?.samples ? detectGaps(historyData.samples) : []),
+    [historyData],
+  );
+  const gapPlugin = useMemo(() => createGapPlugin(gapIndices), [gapIndices]);
+
   const labels = historyData?.samples.map((item) => {
     const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
-
     return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
   });
-
-  const humidityValues = historyData?.samples.map((s) => s.current_humidity);
 
   const chartData = {
     labels,
     datasets: [
       {
         label: "Humedad Relativa (%)",
-        data: humidityValues,
+        data: historyData?.samples.map((s) => s.current_humidity),
         borderColor: "rgba(96, 165, 250, 1)",
         borderWidth: 3,
         pointBackgroundColor: "rgba(96, 165, 250, 1)",
@@ -105,8 +109,11 @@ export function HumidityChart() {
           font: { size: 10 },
           maxRotation: 45,
           minRotation: 45,
+          autoSkip: true,
+          autoSkipPadding: 30,
+          maxTicksLimit: 15,
         },
-        grid: { display: false },
+        grid: { color: "rgba(255,255,255,0.06)" },
       },
     },
     interaction: { intersect: false, mode: "index" as const },
@@ -130,7 +137,7 @@ export function HumidityChart() {
           </div>
         ) : historyData?.samples.length > 0 ? (
           <div className="relative w-full h-full animate-fade-in">
-            <Line data={chartData} options={chartOptions} />
+            <Line data={chartData} options={chartOptions} plugins={[gapPlugin]} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">

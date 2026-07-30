@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,7 @@ import {
 import { Bar } from "react-chartjs-2";
 import { HistoryData, HistoryObserver } from "@/types/history.types";
 import { historyStore } from "@/observer/history-store-instance";
+import { createGapPlugin, detectGaps } from "./gap-plugin";
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +41,17 @@ export function SensorComparisonChart() {
     };
   }, []);
 
+  const gapIndices = useMemo(
+    () => (historyData?.period_efficiency ? detectGaps(
+      historyData.period_efficiency.map((p) => ({
+        ts_end: p.to,
+        created_at: p.from,
+      })),
+    ) : []),
+    [historyData],
+  );
+  const gapPlugin = useMemo(() => createGapPlugin(gapIndices), [gapIndices]);
+
   const labels = historyData?.period_efficiency.map((item) => {
     const fromDate = new Date(item.from);
     const toDate = new Date(item.to);
@@ -48,16 +60,12 @@ export function SensorComparisonChart() {
     return `${formatTime(fromDate)} a ${formatTime(toDate)}`;
   });
 
-  const dataValues = historyData?.period_efficiency.map(
-    (item) => item.efficiency,
-  );
-
   const chartData = {
     labels,
     datasets: [
       {
         label: "Nivel de Eficiencia",
-        data: dataValues,
+        data: historyData?.period_efficiency.map((item) => item.efficiency),
         backgroundColor: "rgba(52, 211, 153, 0.7)",
         borderColor: "rgba(52, 211, 153, 1)",
         borderWidth: 1,
@@ -91,7 +99,13 @@ export function SensorComparisonChart() {
         beginAtZero: true,
       },
       x: {
-        ticks: { color: "rgba(255,255,255,0.6)", font: { size: 10 } },
+        ticks: {
+          color: "rgba(255,255,255,0.6)",
+          font: { size: 10 },
+          autoSkip: true,
+          autoSkipPadding: 30,
+          maxTicksLimit: 15,
+        },
         grid: { display: false },
       },
     },
@@ -116,7 +130,7 @@ export function SensorComparisonChart() {
           </div>
         ) : historyData?.period_efficiency.length > 0 ? (
           <div className="relative w-full h-full animate-fade-in">
-            <Bar data={chartData} options={chartOptions} />
+            <Bar data={chartData} options={chartOptions} plugins={[gapPlugin]} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
