@@ -46,6 +46,10 @@ export function HumidityChart() {
     };
   }, []);
 
+  const chartKey = historyData?.samples
+    ? `${historyData.samples.length}-${historyData.samples[0]?.ts_end}-${historyData.samples.at(-1)?.ts_end}`
+    : 'empty';
+
   const gapIndices = useMemo(
     () => (historyData?.samples ? detectGaps(historyData.samples) : []),
     [historyData],
@@ -137,7 +141,7 @@ export function HumidityChart() {
           </div>
         ) : historyData?.samples.length > 0 ? (
           <div className="relative w-full h-full animate-fade-in">
-            <Line data={chartData} options={chartOptions} plugins={[gapPlugin]} />
+            <Line key={chartKey} data={chartData} options={chartOptions} plugins={[gapPlugin]} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">

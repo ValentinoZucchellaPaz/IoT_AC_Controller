@@ -53,6 +53,10 @@ export function TemperatureChart() {
   );
   const gapPlugin = useMemo(() => createGapPlugin(gapIndices), [gapIndices]);
 
+  const chartKey = historyData?.samples
+    ? `${historyData.samples.length}-${historyData.samples[0]?.ts_end}-${historyData.samples.at(-1)?.ts_end}`
+    : 'empty';
+
   const effRanges = useMemo(
     () =>
       historyData?.samples && historyData?.period_efficiency
@@ -196,7 +200,7 @@ export function TemperatureChart() {
           </div>
         ) : historyData?.samples?.length > 0 ? (
           <div className="relative w-full h-full">
-            <Line data={chartData} options={chartOptions} plugins={[effPlugin, gapPlugin]} />
+            <Line key={chartKey} data={chartData} options={chartOptions} plugins={[effPlugin, gapPlugin]} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
