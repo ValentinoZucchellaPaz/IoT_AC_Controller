@@ -1,7 +1,7 @@
 "use client";
 import { HumidityChart } from "@/components/charts/HumidityChart";
 import { TemperatureChart } from "@/components/charts/TemperatureChart";
-import { SensorComparisonChart } from "@/components/charts/SensorComparisonChart";
+import { EfficiencyChart } from "@/components/charts/EfficiencyChart";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { useHistoryData } from "@/hooks/useHistoryData";
 import { historyStore } from "@/observer/history-store-instance";
@@ -76,7 +76,7 @@ export default function HistoryPage() {
           <div className="my-6 flex flex-col gap-6">
             <TemperatureChart />
             <HumidityChart />
-            <SensorComparisonChart />
+            <EfficiencyChart />
           </div>
         )}
       </section>

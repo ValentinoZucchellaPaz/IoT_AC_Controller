@@ -126,8 +126,32 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans bg-slate-950;
   }
+}
+
+:root {
+  --scrollbar-track: #020617;
+  --scrollbar-thumb: rgba(148, 163, 184, 0.4);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
 }
 
 @media (prefers-reduced-motion: reduce) {

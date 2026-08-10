@@ -60,7 +60,7 @@ export function HumidityChart() {
   const labels = historyData?.samples.map((item) => {
     const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
-    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
   });
 
   const chartData = {

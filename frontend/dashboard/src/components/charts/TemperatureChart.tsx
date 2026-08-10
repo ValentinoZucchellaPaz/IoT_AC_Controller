@@ -22,6 +22,8 @@ import { createGapPlugin, detectGaps } from "./gap-plugin";
 import {
   createEfficiencyPlugin,
   computeEfficiencyRanges,
+  buildEfficiencyIndex,
+  EFFICIENCY_META,
 } from "./efficiency-plugin";
 
 ChartJS.register(
@@ -78,11 +80,12 @@ export function TemperatureChart() {
     () => createEfficiencyPlugin(effRanges),
     [effRanges],
   );
+  const effIndex = useMemo(() => buildEfficiencyIndex(effRanges), [effRanges]);
 
   const labels = historyData?.samples.map((item) => {
     const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
-    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
   });
 
   const chartData = {
@@ -154,8 +157,12 @@ export function TemperatureChart() {
           afterBody(tooltipItems: TooltipItem<"line">[]) {
             const index = tooltipItems[0].dataIndex;
             const sample = historyData?.samples[index];
-            if (!sample) return [];
-            return [`Temp deseada: ${sample.desired_temperature}°C`];
+            const meta = EFFICIENCY_META[effIndex[index]];
+            const lines: string[] = [];
+            if (sample)
+              lines.push(`Temp deseada: ${sample.desired_temperature}°C`);
+            if (meta) lines.push(`${meta.label} (${meta.detail})`);
+            return lines;
           },
         },
       },
@@ -194,18 +201,18 @@ export function TemperatureChart() {
         <h3 className="font-display text-base font-semibold flex items-center gap-2 text-white">
           <Droplets className="h-5 w-5 text-blue-400" /> Temperatura
         </h3>
-        <div className="flex items-center gap-3 text-[11px] text-white/60">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
           <span className="text-white/40">Eficiencia:</span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-green-500/30" />
+            <span className="w-4 h-3 rounded-md bg-green-500/60" />
             Alta
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-amber-500/30" />
+            <span className="w-4 h-3 rounded-md bg-amber-500/60" />
             Media
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-red-500/30" />
+            <span className="w-4 h-3 rounded-md bg-red-500/60" />
             Baja
           </span>
           <div className="relative inline-flex">
@@ -241,7 +248,10 @@ export function TemperatureChart() {
         </div>
       </div>
       {/* Graph */}
-      <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-[0_8px_40px_rgba(0,0,0,0.25)] w-full h-[300px] relative flex flex-col justify-center" aria-label="Gráfico de temperatura a lo largo del tiempo">
+      <div
+        className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-[0_8px_40px_rgba(0,0,0,0.25)] w-full h-[300px] relative flex flex-col justify-center"
+        aria-label="Gráfico de temperatura a lo largo del tiempo"
+      >
         {!historyData?.samples ? (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
             <Loader2 className="h-9 w-9 animate-spin text-white mb-2 mx-auto" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./AmbientBackground.module.css";
 import { useSensorData } from "@/contexts/sensor-data";
 
@@ -14,6 +14,13 @@ function computeTheme(
   return styles.fondoCalido2;
 }
 
+const THEME_BG: Record<string, string> = {
+  [styles.fondoFrio]: "#0c4a6e",
+  [styles.fondoCalido1]: "#5a4633",
+  [styles.fondoCalido2]: "#6b3f2a",
+  [styles.fondoDefault]: "#020617",
+};
+
 export function AmbientBackground() {
   const { data } = useSensorData();
   const sensor = data?.data?.sensor;
@@ -26,6 +33,14 @@ export function AmbientBackground() {
     setPrev(current);
     setCurrent(theme);
   }
+
+  useEffect(() => {
+    const color = THEME_BG[current] ?? THEME_BG[styles.fondoDefault];
+    document.documentElement.style.backgroundColor = color;
+    return () => {
+      document.documentElement.style.backgroundColor = "";
+    };
+  }, [current]);
 
   return (
     <>

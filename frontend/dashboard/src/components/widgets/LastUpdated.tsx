@@ -12,7 +12,7 @@ function formatRelative(date: Date, now: Date): string {
 }
 
 export function LastUpdated() {
-  const { data, loading, error, intervalMs } = useSensorData();
+  const { data, loading, error } = useSensorData();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -22,13 +22,12 @@ export function LastUpdated() {
 
   const timestamp = data?.timestamp;
   const date = timestamp ? new Date(timestamp) : null;
-  const seconds = Math.round(intervalMs / 1000);
 
   if (error) {
     return (
       <p className="flex items-center gap-1.5 text-xs text-red-400" aria-live="polite">
         <RefreshCw className="h-3.5 w-3.5" />
-        Sin conexión con el equipo · cada {seconds}s
+        Sin conexión con el equipo
       </p>
     );
   }
@@ -39,7 +38,7 @@ export function LastUpdated() {
       aria-live="polite"
     >
       <span className={`h-1.5 w-1.5 rounded-full ${loading ? "animate-pulse bg-amber-400" : "bg-emerald-400"}`} />
-      {date ? `Actualizado ${formatRelative(date, now)} · cada ${seconds}s` : "Conectando con el equipo..."}
+      {date ? `Actualizado ${formatRelative(date, now)}` : "Conectando con el equipo..."}
     </p>
   );
 }
