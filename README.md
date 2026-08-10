@@ -52,11 +52,13 @@ Luego abrí http://localhost:3000/api (Swagger) y http://localhost:3001 (Dashboa
 ## Galería
 
 <p align="center">
-  <img src="docs/media/iot_desktop_graphs.jpeg" alt="Dashboard escritorio — gráficos completos" width="600">
-  <br>
   <img src="docs/media/iot_medium_temp.jpeg" alt="Dashboard — temperatura media" width="600">
   <br>
   <img src="docs/media/iot_mobile_send_temp.jpeg" alt="Envío de comando desde el móvil" width="350">
+  <br>
+  <img src="docs/media/iot_desktop_graph.jpeg" alt="Dashboard escritorio — gráficos completos" width="600">
+  <br>
+  <img src="docs/media/iot_desktop_graph_eff.jpeg" alt="Dashboard escritorio — gráficos completos" width="600">
   <br>
   <em>Capturas adicionales del sistema</em>
 </p>
