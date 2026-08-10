@@ -14,6 +14,7 @@ import {
   ScriptableContext,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { Droplets, Loader2, Waves } from "lucide-react";
 import { HistoryData, HistoryObserver } from "@/types/history.types";
 import { historyStore } from "@/observer/history-store-instance";
 import { createGapPlugin, detectGaps } from "./gap-plugin";
@@ -59,7 +60,7 @@ export function HumidityChart() {
   const labels = historyData?.samples.map((item) => {
     const timestamp = item.ts_end || item.created_at;
     const date = new Date(timestamp || new Date());
-    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+    return `${date.getDate()}/${date.getMonth() + 1} - ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
   });
 
   const chartData = {
@@ -126,26 +127,26 @@ export function HumidityChart() {
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-5 shadow-lg flex flex-col md:flex-row gap-4 items-center justify-between">
-        <h3 className="text-base font-semibold flex items-center gap-2 text-white">
-          <i className="ph ph-drop text-xl text-blue-400"></i> Humedad Relativa
+        <h3 className="font-display text-base font-semibold flex items-center gap-2 text-white">
+          <Droplets className="h-5 w-5 text-blue-400" /> Humedad Relativa
         </h3>
       </div>
 
-      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-4 shadow-lg w-full h-[250px] relative flex flex-col justify-center">
+      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-4 shadow-lg w-full h-[250px] relative flex flex-col justify-center" aria-label="Gráfico de humedad relativa a lo largo del tiempo">
         {!historyData?.samples ? (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
-            <i className="ph ph-spinner-gap animate-spin text-4xl mb-2 text-white"></i>
+            <Loader2 className="h-9 w-9 animate-spin text-white mb-2 mx-auto" />
             <p className="text-sm font-medium tracking-wide">
               Esperando datos...
             </p>
           </div>
         ) : historyData?.samples.length > 0 ? (
-          <div className="relative w-full h-full animate-fade-in">
+          <div className="relative w-full h-full animate-in fade-in duration-500">
             <Line key={chartKey} data={chartData} options={chartOptions} plugins={[gapPlugin]} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-white/70 h-full">
-            <i className="ph ph-waves text-4xl text-white/30 mb-3"></i>
+            <Waves className="h-9 w-9 text-white/30 mb-3 mx-auto" />
             <p className="text-sm font-medium tracking-widest uppercase">
               Sin registros de humedad
             </p>

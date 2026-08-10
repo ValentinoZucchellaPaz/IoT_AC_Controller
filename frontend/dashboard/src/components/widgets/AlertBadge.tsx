@@ -1,78 +1,119 @@
 "use client";
 
-import { useSensorPolling } from "@/hooks/useSensorPolling";
-import { Power, Snowflake, CheckCircle } from "lucide-react";
+import { Power, Snowflake, CheckCircle, type LucideIcon } from "lucide-react";
+import { useSensorData } from "@/contexts/sensor-data";
+import { LastUpdated } from "@/components/widgets/LastUpdated";
+import { PollingIntervalControl } from "@/components/widgets/PollingIntervalControl";
+import type { SensorResponseDTO } from "@/types/sensor.types";
+
+interface AlertState {
+  Icon: LucideIcon;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  dotColor: string;
+  title: string;
+  message: string;
+}
+
+const CONNECTING_STATE: AlertState = {
+  Icon: Power,
+  bgColor: "bg-white/5",
+  borderColor: "border-white/10",
+  textColor: "text-white/70",
+  dotColor: "bg-white/70",
+  title: "Sincronizando",
+  message: "Conectando con el equipo...",
+};
+
+function buildState({
+  error,
+  sensor,
+  isPowerOn,
+}: {
+  error: Error | null;
+  sensor: SensorResponseDTO["data"]["sensor"] | undefined;
+  isPowerOn: boolean;
+}): AlertState {
+  if (error) {
+    return {
+      Icon: Power,
+      bgColor: "bg-red-500/10",
+      borderColor: "border-red-400/20",
+      textColor: "text-red-300",
+      dotColor: "bg-red-400",
+      title: "Alerta Crítica",
+      message: "Se perdió la conexión con el ESP32",
+    };
+  }
+
+  if (!sensor) {
+    return CONNECTING_STATE;
+  }
+
+  const currentTemp = sensor.avg_temperature;
+  const targetTemp = sensor.desired_temperature ?? 24;
+
+  if (!isPowerOn) {
+    return {
+      Icon: Power,
+      bgColor: "bg-zinc-500/10",
+      borderColor: "border-zinc-400/20",
+      textColor: "text-zinc-300",
+      dotColor: "bg-zinc-400",
+      title: "Apagado",
+      message: "El equipo se encuentra sin actividad.",
+    };
+  }
+
+  if (currentTemp && currentTemp >= targetTemp + 1) {
+    return {
+      Icon: Snowflake,
+      bgColor: "bg-sky-500/10",
+      borderColor: "border-sky-400/20",
+      textColor: "text-sky-300",
+      dotColor: "bg-sky-400",
+      title: "Enfriando",
+      message: `Enfriando la habitación hasta los ${targetTemp}°C.`,
+    };
+  }
+
+  return {
+    Icon: CheckCircle,
+    bgColor: "bg-emerald-500/10",
+    borderColor: "border-emerald-400/20",
+    textColor: "text-emerald-300",
+    dotColor: "bg-emerald-400",
+    title: "En Reposo",
+    message: `Temperatura ideal alcanzada (${currentTemp}°C).`,
+  };
+}
 
 export function AlertBadge() {
-  const { data, loading, error } = useSensorPolling(60000);
-
-  let bgColor = "bg-white/5";
-  let borderColor = "border-white/10";
-  let textColor = "text-white/70";
-  let dotColor = "bg-white/70";
-
-  let AlertIcon = Power;
-  let title = "Sincronizando";
-  let message = "Conectando con el equipo...";
+  const { data, error } = useSensorData();
 
   const sensor = data?.data?.sensor;
-  const connectivity = data?.data?.connectivity;
-  const apiTimestamp = connectivity?.ts_end;
   const isPowerOn = sensor?.ac_state ?? false;
-
-  if (error) {
-    bgColor = "bg-red-500/10";
-    borderColor = "border-red-400/20";
-    textColor = "text-red-300";
-    dotColor = "bg-red-400";
-
-    title = "Alerta Crítica";
-    message = "Se perdió la conexión con el ESP32";
-  } else if (sensor) {
-    const currentTemp = sensor?.avg_temperature;
-    const targetTemp = sensor?.desired_temperature ?? 24;
-
-    if (!isPowerOn) {
-      AlertIcon = Power;
-      bgColor = "bg-zinc-500/10";
-      borderColor = "border-zinc-400/20";
-      textColor = "text-zinc-300";
-      dotColor = "bg-zinc-400";
-
-      title = "Apagado";
-      message = "El equipo se encuentra sin actividad.";
-    } else if (currentTemp && currentTemp >= targetTemp + 1) {
-      AlertIcon = Snowflake;
-      bgColor = "bg-sky-500/10";
-      borderColor = "border-sky-400/20";
-      textColor = "text-sky-300";
-      dotColor = "bg-sky-400";
-
-      title = "Enfriando";
-      message = `Enfriando la habitación hasta los ${targetTemp}°C.`;
-    } else {
-      AlertIcon = CheckCircle;
-      bgColor = "bg-emerald-500/10";
-      borderColor = "border-emerald-400/20";
-      textColor = "text-emerald-300";
-      dotColor = "bg-emerald-400";
-
-      title = "En Reposo";
-      message = `Temperatura ideal alcanzada (${currentTemp}°C).`;
-    }
-  }
+  const { Icon, bgColor, borderColor, textColor, title, message } = buildState({
+    error,
+    sensor,
+    isPowerOn,
+  });
+  const heading = sensor && isPowerOn ? `Encendido - ${title}` : title;
 
   return (
     <div
       className={`
-        ${borderColor}
         ${bgColor}
+        ${borderColor}
         border
         rounded-3xl
         p-5
+        sm:p-6
         flex
         items-center
-        gap-5
+        gap-4
+        sm:gap-6
         w-full
         min-h-[160px]
         backdrop-blur-sm
@@ -83,9 +124,12 @@ export function AlertBadge() {
     >
       <div
         className={`
-          w-16
-          h-16
+          relative
           shrink-0
+          w-14
+          h-14
+          sm:w-16
+          sm:h-16
           rounded-full
           flex
           items-center
@@ -97,38 +141,22 @@ export function AlertBadge() {
           ${textColor}
         `}
       >
-        <AlertIcon size={30} />
+        <Icon size={30} />
       </div>
 
-      <div className="flex flex-col justify-center">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+      <div className="min-w-0 flex-1">
+        <h4
+          className={`text-xs font-semibold uppercase tracking-[0.25em] ${textColor}`}
+        >
+          {heading}
+        </h4>
 
-          <h4
-            className={`
-              text-xs
-              font-semibold
-              uppercase
-              tracking-[0.25em]
-              ${textColor}
-            `}
-          >
-            {sensor && isPowerOn && "Encendido - "}
-            {title}
-          </h4>
+        <p className="mt-1 text-sm leading-relaxed text-white/90">{message}</p>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-4">
+          <LastUpdated />
+          <PollingIntervalControl />
         </div>
-
-        <p className="text-sm leading-relaxed text-white/90">{message}</p>
-
-        {apiTimestamp && !error && (
-          <p className="mt-3 text-xs text-zinc-400">
-            Último ping:{" "}
-            {(() => {
-              const d = new Date(apiTimestamp);
-              return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(2, 4)} - ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
-            })()}
-          </p>
-        )}
       </div>
     </div>
   );

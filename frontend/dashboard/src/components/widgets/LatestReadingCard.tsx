@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Minus, Plus, Check, Loader2 } from "lucide-react";
-import styles from "./LatestReadingCard.module.css";
-import { useSensorPolling } from "@/hooks/useSensorPolling";
+import { Minus, Plus, Check, Loader2, AlertTriangle, Wifi } from "lucide-react";
+import { useSensorData } from "@/contexts/sensor-data";
 import { SensorsService } from "@/services/sensors.service";
-import type { SensorResponseDTO } from "@/types/sensor.types";
 
 const MIN_TEMP = 15;
 const MAX_TEMP = 32;
 
 export default function LatestReadingCard() {
-  const { data: responseData, loading, error } = useSensorPolling(60000);
+  const { data: responseData, loading, error } = useSensorData();
 
   const sensor = responseData?.data?.sensor;
   const connectivity = responseData?.data?.connectivity;
@@ -59,39 +57,7 @@ export default function LatestReadingCard() {
   const currentTemp = sensor?.avg_temperature ?? 24;
   const maxTemp = sensor?.max_temperature ?? 24;
   const minTemp = sensor?.min_temperature ?? 24;
-  const humidity = sensor?.current_humidity ?? 45;
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center p-8 bg-red-900/20 border border-red-500/50 rounded-3xl h-full min-h-[300px] w-full">
-        <div className="text-red-400 text-center">
-          <i className="ph ph-warning-circle text-4xl mb-2"></i>
-          <p className="text-sm font-bold tracking-wide">Error de conexión</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading || !sensor) {
-    return (
-      <div className="flex justify-center items-center p-8 bg-white/5 border border-white/10 rounded-3xl animate-pulse h-full min-h-[300px] w-full">
-        <span className="text-white/50 text-sm font-medium tracking-widest uppercase">
-          Conectando con ESP32...
-        </span>
-      </div>
-    );
-  }
-
-  let fondoClass = styles.fondoDefault;
-  if (acState) {
-    if (currentTemp <= 20) {
-      fondoClass = styles.fondoFrio;
-    } else if (currentTemp <= 27) {
-      fondoClass = styles.fondoCalido1;
-    } else {
-      fondoClass = styles.fondoCalido2;
-    }
-  }
+  const humidity = Math.round(sensor?.current_humidity ?? 45);
 
   let circleTheme = "";
 
@@ -111,15 +77,25 @@ export default function LatestReadingCard() {
   }
 
   return (
-    <>
-      {/* Dinamic background*/}
-      <div className={`${styles.pageContainer} ${fondoClass}`} />
-
-      {/* original widget*/}
-      <div className="space-y-6 flex-1 flex flex-col animate-fade-in w-full mt-3">
-        <div className="flex justify-between items-center w-full pb-2">
+    <div className="flex flex-1 flex-col w-full mt-3">
+      {error ? (
+        <div className="flex justify-center items-center p-8 bg-red-900/20 border border-red-500/50 rounded-3xl h-full min-h-[300px] w-full">
+          <div className="text-red-400 text-center">
+            <AlertTriangle className="h-10 w-10 mb-2 mx-auto" />
+            <p className="text-sm font-bold tracking-wide">Error de conexión</p>
+          </div>
+        </div>
+      ) : loading || !sensor ? (
+        <div className="flex justify-center items-center p-8 bg-white/5 rounded-3xl animate-pulse flex-1 min-h-[300px] w-full">
+          <span className="text-white/50 text-sm font-medium tracking-widest uppercase">
+            Conectando con ESP32...
+          </span>
+        </div>
+      ) : (
+        <div className="space-y-6 flex-1 flex flex-col animate-in fade-in duration-500 w-full">
+          <div className="flex justify-between items-center w-full pb-2">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+            <h2 className="font-display text-3xl font-bold tracking-tight text-white drop-shadow-lg">
               {deviceName}
             </h2>
             <p className="text-sm text-white/70 flex items-center gap-2 mt-1 font-medium">
@@ -129,8 +105,8 @@ export default function LatestReadingCard() {
                 } animate-pulse`}
               />
 
-              <i
-                className={`ph ph-wifi-high ${
+              <Wifi
+                className={`h-4 w-4 ${
                   deviceStatus ? "text-green-400" : "text-red-400"
                 }`}
               />
@@ -147,7 +123,7 @@ export default function LatestReadingCard() {
             className={`relative w-60 h-60 sm:w-72 sm:h-72 rounded-full
   backdrop-blur-xl border ring-1 ring-white/5
   flex flex-col items-center justify-center
-  transition-all duration-700 ease-in-out
+  transition-all duration-500 ease-in-out
   ${circleTheme}`}
           >
             {/* TOP: título */}
@@ -156,8 +132,8 @@ export default function LatestReadingCard() {
             </span>
 
             {/* CENTER: temperatura (perfectamente centrada) */}
-            <div className="flex items-start leading-none">
-              <span className="text-7xl sm:text-8xl font-light tracking-tighter">
+            <div className="flex items-start gap-2 pl-1 leading-none">
+              <span className="font-display text-7xl sm:text-8xl font-light tracking-tighter">
                 {currentTemp}
               </span>
               <span className="text-2xl font-light mt-2">°C</span>
@@ -168,14 +144,14 @@ export default function LatestReadingCard() {
               {/* min / max */}
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400/60" />
+                  <span className="uppercase tracking-wider opacity-60">min</span>
                   {minTemp ?? "--"}°
                 </span>
 
                 <span className="opacity-30">|</span>
 
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400/60" />
+                  <span className="uppercase tracking-wider opacity-60">máx</span>
                   {maxTemp ?? "--"}°
                 </span>
               </div>
@@ -194,20 +170,20 @@ export default function LatestReadingCard() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 pb-2">
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-3xl p-4 flex flex-col">
+          <div className="bg-white/10 backdrop-blur-sm border border-transparent rounded-3xl p-4 flex flex-col">
             <div className="text-white/70 mb-1">
               <span className="text-xs uppercase tracking-widest font-semibold">
                 Humedad
               </span>
             </div>
             <div className="flex items-baseline gap-1 text-white mt-1">
-              <span className="text-4xl font-semibold">{humidity}</span>
+              <span className="font-display text-4xl font-semibold">{humidity}</span>
               <span className="text-xl text-white/80">%</span>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-3xl p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-white/70 mb-2">
+          <div className="bg-white/10 backdrop-blur-sm border border-transparent rounded-3xl p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-white/70 mb-2" aria-live="polite">
               <span className="text-xs uppercase tracking-widest font-semibold">
                 Objetivo
               </span>
@@ -237,7 +213,8 @@ export default function LatestReadingCard() {
             <div className="flex items-center gap-2 mt-auto">
               <div className="flex-1">
                 <span
-                  className={`text-4xl font-semibold transition-colors ${
+                  id="target-temp"
+                  className={`font-display text-4xl font-semibold transition-colors ${
                     sendError
                       ? "text-red-400"
                       : wasSent
@@ -253,6 +230,8 @@ export default function LatestReadingCard() {
               <button
                 onClick={() => adjustTemp(-1)}
                 disabled={sending || wasSent || displayTemp <= MIN_TEMP}
+                aria-label="Bajar temperatura"
+                aria-controls="target-temp"
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Minus className="w-5 h-5" />
@@ -260,6 +239,8 @@ export default function LatestReadingCard() {
               <button
                 onClick={() => adjustTemp(1)}
                 disabled={sending || wasSent || displayTemp >= MAX_TEMP}
+                aria-label="Subir temperatura"
+                aria-controls="target-temp"
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Plus className="w-5 h-5" />
@@ -305,6 +286,7 @@ export default function LatestReadingCard() {
           </div>
         </div>
       </div>
-    </>
+      )}
+    </div>
   );
 }
