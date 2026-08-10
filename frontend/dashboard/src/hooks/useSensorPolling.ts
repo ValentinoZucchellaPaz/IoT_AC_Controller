@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { SensorsService } from '@/services/sensors.service';
 import type { SensorResponseDTO } from '@/types/sensor.types';
 
-interface SensorPollingState {
+export interface SensorPollingState {
   data: SensorResponseDTO | null;
   loading: boolean;
   error: Error | null;
+  intervalMs: number;
 }
 
 const DEFAULT_INTERVAL_MS = 60000;
@@ -59,5 +60,6 @@ export function useSensorPolling(
     data,
     loading,
     error,
+    intervalMs,
   };
 }

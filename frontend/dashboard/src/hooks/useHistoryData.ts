@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SensorsService } from "@/services/sensors.service";
 import type { HistoryResponseDTO } from "@/types/sensor.types";
 import { ApiPeriods } from "@/types/history.types";
@@ -10,6 +10,7 @@ interface HistoryDataState {
   loading: boolean;
   error: Error | null;
   noData: boolean;
+  refresh: () => void;
 }
 
 export function useHistoryData(period: ApiPeriods): HistoryDataState {
@@ -17,6 +18,7 @@ export function useHistoryData(period: ApiPeriods): HistoryDataState {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [noData, setNoData] = useState(false);
+  const [reloadFlag, setReloadFlag] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,12 +57,17 @@ export function useHistoryData(period: ApiPeriods): HistoryDataState {
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, reloadFlag]);
+
+  const refresh = useCallback(() => {
+    setReloadFlag((flag) => flag + 1);
+  }, []);
 
   return {
     data,
     loading,
     error,
     noData,
+    refresh,
   };
 }

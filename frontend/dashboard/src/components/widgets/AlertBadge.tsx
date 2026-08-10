@@ -1,10 +1,11 @@
 "use client";
 
-import { useSensorPolling } from "@/hooks/useSensorPolling";
+import { useSensorData } from "@/contexts/sensor-data";
+import { LastUpdated } from "@/components/widgets/LastUpdated";
 import { Power, Snowflake, CheckCircle } from "lucide-react";
 
 export function AlertBadge() {
-  const { data, loading, error } = useSensorPolling(60000);
+  const { data, error } = useSensorData();
 
   let bgColor = "bg-white/5";
   let borderColor = "border-white/10";
@@ -16,8 +17,6 @@ export function AlertBadge() {
   let message = "Conectando con el equipo...";
 
   const sensor = data?.data?.sensor;
-  const connectivity = data?.data?.connectivity;
-  const apiTimestamp = connectivity?.ts_end;
   const isPowerOn = sensor?.ac_state ?? false;
 
   if (error) {
@@ -102,8 +101,6 @@ export function AlertBadge() {
 
       <div className="flex flex-col justify-center">
         <div className="flex items-center gap-2 mb-1">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-
           <h4
             className={`
               text-xs
@@ -120,15 +117,9 @@ export function AlertBadge() {
 
         <p className="text-sm leading-relaxed text-white/90">{message}</p>
 
-        {apiTimestamp && !error && (
-          <p className="mt-3 text-xs text-zinc-400">
-            Último ping:{" "}
-            {(() => {
-              const d = new Date(apiTimestamp);
-              return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(2, 4)} - ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
-            })()}
-          </p>
-        )}
+        <div className="mt-3">
+          <LastUpdated />
+        </div>
       </div>
     </div>
   );
